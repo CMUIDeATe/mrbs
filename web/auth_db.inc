@@ -32,20 +32,24 @@ $user_list_link = "edit_users.php";
  *   non-zero - The pair are valid
  */
 
-function authValidateUser($user, $pass)
+  
+
+function authValidateUser( $user, $pass ) 
 {
-  global $tbl_users;
+	global $tbl_users;
+	$user = strtolower(addslashes($user));
+    // Select the users's password hash from the database
+    $stored = sql_query1( "SELECT user_pass FROM $tbl_users WHERE user_login = '$user';" );
 
-  $user = strtolower(addslashes($user));
+    require_once( 'wp-helpers/class-phpass.php');
+    $hasher = new PasswordHash(8, TRUE);
 
-  // No addslashes() required because it's put in the database as an MD5,
-  // which is safe.
-  $pass = md5($pass);
-
-  return max(0, sql_query1("select count(*) from $tbl_users where name='$user' and password='$pass';"));
+	return max(0, sql_query1("select count(*) from $tbl_users where user_login='$user' and user_pass='$hasher';"));
   // The max is used to cover the case when there's an SQL Query error (ie -1), probably because $tbl_users
   // hasn't been set up yet.   In that case we want to return 0 (ie validation failed)  
 }
+
+
 
 /* authGetUserLevel($user)
  * 
@@ -65,7 +69,7 @@ function authGetUserLevel($user)
     return 0;
   }
   
-  return max (0, sql_query1("SELECT level FROM $tbl_users WHERE name='$user' LIMIT 1"));
+  return max (0, sql_query1("SELECT level FROM $tbl_users WHERE user_login='$user' LIMIT 1"));
   // The max is used to cover the case when there's an SQL Query error (ie -1), probably because
   // the database hasn't yet been upgraded and there's no 'level' column.   In that case we want 
   // to return 0 (ie the user has no rights)

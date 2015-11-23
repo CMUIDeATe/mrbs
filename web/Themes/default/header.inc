@@ -170,6 +170,7 @@ function ChangeOptionDays(formObj, prefix)
     <tr>
       <td id="company">
         <div>
+		
           <?php
           echo "<div id=\"logo\">\n";
           if (!empty($mrbs_company_url))
@@ -183,7 +184,8 @@ function ChangeOptionDays(formObj, prefix)
           else
           {
             $logo_size = getimagesize($mrbs_company_logo);
-            echo "<img src=\"$mrbs_company_logo\" " . $logo_size[3] . " alt=\"logo\">\n";
+            //echo "<img src=\"$mrbs_company_logo\" " . $logo_size[8] . " alt=\"logo\">\n";
+			echo "<img src=\"$mrbs_company_logo\" " . $logo_size [0]. " alt=\"logo\">\n";
           }
           if (!empty($mrbs_company_url))
           {
@@ -195,6 +197,7 @@ function ChangeOptionDays(formObj, prefix)
             echo "<div id=\"more_info\">$mrbs_company_more_info</div>\n";
           }
           ?>
+		  
           <div id="mrbs">
             <a href="index.php"><?php echo get_vocab("mrbs") ?></a>
           </div>

@@ -1,5 +1,5 @@
 <?php
-// $Id: edit_area_room.php 1129 2009-06-24 15:47:32Z cimorrison $
+// $Id: edit_area_room.php 1129 2009-06-24 15:47:32Z id8 $
 
 require_once "grab_globals.inc.php";
 require_once "config.inc.php";
@@ -21,6 +21,9 @@ $old_room_name = get_form_var('old_room_name', 'string');
 $area_name = get_form_var('area_name', 'string');
 $description = get_form_var('description', 'string');
 $capacity = get_form_var('capacity', 'int');
+$room_max_daily_hours = get_form_var('room_max_daily_hours', 'int');
+$room_auth_users = get_form_var('room_auth_users', 'array');
+$room_unauth_users = get_form_var('room_unauth_users', 'array');
 $room_admin_email = get_form_var('room_admin_email', 'string');
 $area_admin_email = get_form_var('area_admin_email', 'string');
 $area_morningstarts = get_form_var('area_morningstarts', 'int');
@@ -40,67 +43,67 @@ $change_done = get_form_var('change_done', 'string');
 $change_room = get_form_var('change_room', 'string');
 $change_area = get_form_var('change_area', 'string');
 
-// If we dont know the right date then make it up
+// If we don't know the right date then make it up
 if (!isset($day) or !isset($month) or !isset($year))
-{
-  $day   = date("d");
-  $month = date("m");
-  $year  = date("Y");
-}
+	{
+	  $day   = date("d");
+	  $month = date("m");
+	  $year  = date("Y");
+	}
 
 if (isset($area_eveningends_t))
-{
-  // if we've been given a time in minutes rather than hours and minutes, convert it
-  // (this will happen if JavaScript is enabled)
-  $area_eveningends_minutes = $area_eveningends_t % 60;
-  $area_eveningends = ($area_eveningends_t - $area_eveningends_minutes)/60;
-}
+	{
+	  // if we've been given a time in minutes rather than hours and minutes, convert it
+	  // (this will happen if JavaScript is enabled)
+	  $area_eveningends_minutes = $area_eveningends_t % 60;
+	  $area_eveningends = ($area_eveningends_t - $area_eveningends_minutes)/60;
+	}
 
 if (!empty($area_morning_ampm))
-{
-  if (($area_morning_ampm == "pm") && ($area_morningstarts < 12))
-  {
-    $area_morningstarts += 12;
-  }
-  if (($area_morning_ampm == "am") && ($area_morningstarts > 11))
-  {
-    $area_morningstarts -= 12;
-  }
-}
+	{
+	  if (($area_morning_ampm == "pm") && ($area_morningstarts < 12))
+		  {
+			$area_morningstarts += 12;
+		  }
+	  if (($area_morning_ampm == "am") && ($area_morningstarts > 11))
+		  {
+			$area_morningstarts -= 12;
+		  }
+	}
 
 if (!empty($area_evening_ampm))
-{
-  if (($area_evening_ampm == "pm") && ($area_eveningends < 12))
-  {
-    $area_eveningends += 12;
-  }
-  if (($area_evening_ampm == "am") && ($area_eveningends > 11))
-  {
-    $area_eveningends -= 12;
-  }
-}
+	{
+	  if (($area_evening_ampm == "pm") && ($area_eveningends < 12))
+		  {
+			$area_eveningends += 12;
+		  }
+	  if (($area_evening_ampm == "am") && ($area_eveningends > 11))
+		  {
+			$area_eveningends -= 12;
+		  }
+	}
 
 $area_private_enabled = (!empty($area_private_enabled)) ? 1 : 0;
 $area_private_mandatory = (!empty($area_private_mandatory)) ? 1 : 0;
-
 $required_level = (isset($max_level) ? $max_level : 2);
+
 if (!getAuthorised($required_level))
-{
-  showAccessDenied($day, $month, $year, $area, "");
-  exit();
-}
+	{
+	  showAccessDenied($day, $month, $year, $area, "");
+	  exit();
+	}
 
 // Done changing area or room information?
 if (isset($change_done))
-{
-  if (!empty($room)) // Get the area the room is in
-  {
-    $area = mrbsGetRoomArea($room);
-  }
-  Header("Location: admin.php?day=$day&month=$month&year=$year&area=$area");
-  exit();
-}
-
+	{
+	  if (!empty($room)) // Get the area the room is in
+		  {
+			$area = mrbsGetRoomArea($room);
+		  }
+	  Header("Location: admin.php?day={$day}&month={$month}&year={$year}&area={$area}");
+	  exit();
+	}
+//FIX THIS??
 print_header($day, $month, $year, isset($area) ? $area : "", isset($room) ? $room : "");
 
 ?>
@@ -128,7 +131,10 @@ if (!empty($room))
       fatal_error(TRUE, get_vocab("failed_to_acquire"));
     }
     // Check the new area still exists
-    if (sql_query1("SELECT COUNT(*) FROM $tbl_area WHERE id=$new_area LIMIT 1") < 1)
+    if (sql_query1("SELECT COUNT(*) 
+							FROM $tbl_area 
+							WHERE id=$new_area 
+							LIMIT 1") < 1)
     {
       $valid_area = FALSE;
     }
@@ -137,22 +143,67 @@ if (!empty($room))
     // just editing the other details for an existing room we don't want to reject
     // the edit because the room already exists!)
     elseif ( (($new_area != $old_area) || ($room_name != $old_room_name))
-            && sql_query1("SELECT COUNT(*) FROM $tbl_room WHERE room_name='" . addslashes($room_name) . "' AND area_id=$new_area LIMIT 1") > 0)
+            && sql_query1("SELECT COUNT(*) 
+										FROM $tbl_room 
+										WHERE room_name='" . addslashes($room_name) . "' 
+										AND area_id=$new_area 
+										LIMIT 1") > 0)
     {
       $valid_room_name = FALSE;
     }
-    // If everything is still OK, update the databasae
+	//***************************************
+	//************* TABLE UPDATES *************
+    // If everything is still OK, update the databasae *****
+	//***************************************
     else
     {
-      $sql = "UPDATE $tbl_room SET room_name='" . addslashes($room_name)
-        . "', description='" . addslashes($description)
-        . "', capacity=$capacity, area_id=$new_area, room_admin_email='"
-        . addslashes($room_admin_email) . "' WHERE id=$room";
+      $sql = "UPDATE $tbl_room 
+				SET room_name='" . addslashes($room_name)
+						. "', description='" . addslashes($description)
+						. "', capacity=$capacity, max_daily_hours=$room_max_daily_hours, area_id=$new_area, room_admin_email='"
+						. addslashes($room_admin_email) . "' 
+				WHERE id=$room";
       if (sql_command($sql) < 0)
       {
         fatal_error(0, get_vocab("update_room_failed") . sql_error());
       }
+	  
+	  //FROM UNAuthorized Select List we get newly auth_users
+      if(sizeof($room_unauth_users) > 0)
+		{
+		  
+		  $sql = "INSERT INTO $tbl_permissions (room_id, user_name) VALUES";
+		  
+		  for($i = 0; $i < sizeof($room_unauth_users); $i++)
+			{
+			  $sql = $sql . "($room, '$room_unauth_users[$i]')" . (($i + 1) == sizeof($room_unauth_users) ? "" : ",");
+			}
+			
+		  if(sql_command($sql) < 0)
+			{
+			  fatal_error(0, get_vocab("update_room_failed") . sql_error() . " " . $sql);
+			}
+		}
     }
+	
+	//FROM Authorized Select List we get users to UNauth
+	  if(sizeof($room_auth_users) > 0)
+		{
+
+			$sql = "DELETE FROM $tbl_permissions WHERE (room_id = $room AND user_name = '";
+		  
+			for($i = 0; $i < sizeof($room_auth_users); $i++)
+				{
+					$sql = $sql . "$room_auth_users[$i]');";
+					if(sql_command($sql) < 0)
+						{
+							fatal_error(0, get_vocab("update_room_failed") . sql_error() . " " . $sql);
+						}
+					$sql = "DELETE FROM $tbl_permissions WHERE (room_id = $room AND user_name = '";
+				}
+
+		}
+
     
     // Release the mutex
     sql_mutex_unlock("$tbl_area");
@@ -165,95 +216,186 @@ if (!empty($room))
   }
   $row = sql_row_keyed($res, 0);
   sql_free($res);
+  //echo print_r($row);
 ?>
 
 <form class="form_general" action="edit_area_room.php" method="post">
-  <fieldset class="admin">
-  <legend><?php echo get_vocab("editroom") ?></legend>
+  <!--<fieldset class="admin">-->
   
-    <fieldset>
-    <legend></legend>
-      <span class="error">
-         <?php 
-         // It's impossible to have more than one of these error messages, so no need to worry
-         // about paragraphs or line breaks.
-         echo ((FALSE == $valid_email) ? get_vocab('invalid_email') : "");
-         echo ((FALSE == $valid_area) ? get_vocab('invalid_area') : "");
-         echo ((FALSE == $valid_room_name) ? get_vocab('invalid_room_name') : "");
-         ?>
-      </span>
-    </fieldset>
-    
-    <input type="hidden" name="room" value="<?php echo $row["id"]?>">
-    
-    <?php
-    $res = sql_query("SELECT id, area_name FROM $tbl_area");
-    if (!$res)
-    {
-      fatal_error(FALSE, "Fatal error: " . sql_error);  // should not happen
-    }
-    if (sql_count($res) == 0)
-    {
-      fatal_error(FALSE, get_vocab('noareas'));  // should not happen
-    }
-    ?>
-    <div>
-    <label for="new_area"><?php echo get_vocab("area") ?>:</label>
-    <select id="new_area" name="new_area">
-      <?php  
-      for ($i = 0; ($row_area = sql_row_keyed($res, $i)); $i++)
-      {
-        echo "<option value=\"" . $row_area['id'] . "\"";
-        if ($row_area['id'] == $row['area_id'])
-        {
-          echo " selected=\"selected\"";
-        }
-        echo ">" . $row_area['area_name'] . "</option>\n";
-      }  
-      ?>
-    </select>
-    <input type="hidden" name="old_area" value="<?php echo $row['area_id'] ?>">
-    </div>
-    
-    <div>
-    <label for="room_name"><?php echo get_vocab("name") ?>:</label>
-    <input type="text" id="room_name" name="room_name" value="<?php echo htmlspecialchars($row["room_name"]); ?>">
-    <input type="hidden" name="old_room_name" value="<?php echo htmlspecialchars($row["room_name"]); ?>">
-    </div>
-    
-    <div>
-    <label for="description"><?php echo get_vocab("description") ?>:</label>
-    <input type="text" id="description" name="description" value="<?php echo htmlspecialchars($row["description"]); ?>"> 
-    </div>
-    
-    <div>
-    <label for="capacity"><?php echo get_vocab("capacity") ?>:</label>
-    <input type="text" id="capacity" name="capacity" value="<?php echo $row["capacity"]; ?>">
-    </div>
-    
-    <div>
-    <label for="room_admin_email"><?php echo get_vocab("room_admin_email") ?>:</label>
-    <input type="text" id="room_admin_email" name="room_admin_email" maxlength="75" value="<?php echo htmlspecialchars($row["room_admin_email"]); ?>">
-    </div>
-    
-    <fieldset class="submit_buttons">
-    <legend></legend>
-      <div id="edit_area_room_submit_back">
-        <input class="submit" type="submit" name="change_done" value="<?php echo get_vocab("backadmin") ?>">
-      </div>
-      <div id="edit_area_room_submit_save">
-        <input class="submit" type="submit" name="change_room" value="<?php echo get_vocab("change") ?>">
-      </div>
-    </fieldset>
-    
-  </fieldset>
-</form>
 
+	 <span class="error">
+		 <?php 
+		 // It's impossible to have more than one of these error messages, so no need to worry
+		 // about paragraphs or line breaks.
+		 echo ((FALSE == $valid_email) ? get_vocab('invalid_email') : "");
+		 echo ((FALSE == $valid_area) ? get_vocab('invalid_area') : "");
+		 echo ((FALSE == $valid_room_name) ? get_vocab('invalid_room_name') : "");
+		 ?>
+	</span>
+	<input type="hidden" name="room" value="<?php echo $row["id"]?>">
+	    
+    <?php
+		$res = sql_query("SELECT id, area_name FROM $tbl_area");
+		if (!$res)
+		{
+		  fatal_error(FALSE, "Fatal error: " . sql_error);  // should not happen
+		}
+		if (sql_count($res) == 0)
+		{
+		  fatal_error(FALSE, get_vocab('noareas'));  // should not happen
+		}
+    ?>
+	
+    <div>
+		<label for="new_area"><?php echo get_vocab("area") ?>:</label>
+		<select id="new_area" name="new_area">
+		<?php  
+		  for ($i = 0; ($row_area = sql_row_keyed($res, $i)); $i++)
+		  {
+			echo "<option value=\"" . $row_area['id'] . "\"";
+			if ($row_area['id'] == $row['area_id'])
+			{
+			  echo " selected=\"selected\"";
+			}
+			echo ">" . $row_area['area_name'] . "</option>\n";
+		  }  
+		  ?>
+		  </select>
+		
+		<input type="hidden" name="old_area" value="<?php echo $row['area_id'] ?>">
+    </div>
+    
+    <div>
+		<label for="room_name"><?php echo get_vocab("name") ?>:</label>
+		<input type="text" id="room_name" name="room_name" value="<?php echo htmlspecialchars($row["room_name"]); ?>">
+		<input type="hidden" name="old_room_name" value="<?php echo htmlspecialchars($row["room_name"]); ?>">
+    </div>
+    
+    <div>
+		<label for="description"><?php echo get_vocab("description") ?>:</label>
+		<input type="text" id="description" name="description" value="<?php echo htmlspecialchars($row["description"]); ?>"> 
+    </div>
+    
+    <div>
+		<label for="capacity"><?php echo get_vocab("capacity") ?>:</label>
+		<input type="text" id="capacity" name="capacity" value="<?php echo $row["capacity"]; ?>">
+    </div>
+    
+    <div>
+		<label for="room_admin_email"><?php echo get_vocab("room_admin_email") ?>:</label>
+		<input type="text" id="room_admin_email" name="room_admin_email" maxlength="75" value="<?php echo htmlspecialchars($row["room_admin_email"]); ?>">
+    </div>
+
+    <div>
+		<label for="room_max_daily_hours"><?php echo get_vocab("room_max_daily_hours") ?>:</label>
+		<input type="text" id="room_max_daily_hours" name="room_max_daily_hours" value="<?php echo $row["max_daily_hours"]; ?>">
+    </div>
+	<div><table>
+		<tr>
+			<th>
+				<b><?php echo get_vocab("room_auth_users") ?> <br />-- Select to Change --</b>
+			</th>
+			<th>
+				
+			</th>
+			<th>
+				<b><?php echo get_vocab("room_unauth_users") ?> <br />-- Select to Change --</b>
+			</th>
+		</tr>
+		<tr>
+			<td>
+				<!-- <label for="room_auth_users"></label> -->
+				<select id="room_auth_users" name="room_auth_users[]" multiple="multiple" size="15">
+				<?php
+					$sql2="SELECT u.ID, u.user_login, p.room_id 
+										FROM mrbs_users AS u 
+												LEFT OUTER JOIN mrbs_permissions AS p 
+													ON u.user_login=p.user_name AND room_id=$room 
+										WHERE u.level < 2 
+										ORDER BY u.user_login";
+					$res2 = sql_query($sql2);
+					if (!$res2)
+					  {
+						fatal_error(FALSE, "Fatal error: " . sql_error);  // should not happen?
+					  }
+					if (sql_count($res2) == 0)
+					  {
+						fatal_error(FALSE, "Problem with permissions: " . sql_error);  // should not happen?
+					  }
+					for ($i = 0; ($row_perm = sql_row_keyed($res2, $i)); $i++)
+					  {
+						
+						if ($row_perm['room_id'] == $room)
+						  {
+							// echo " selected=\"selected\"";
+							echo "<option value=\"" . $row_perm['user_login'] . "\"";
+							echo ">" . $row_perm['user_login'] . "</option>\n";
+						  }
+
+					  }
+
+				?>
+				</select>
+			</td>
+			<td>
+				<br /><br /><br /><br />
+				<input class="submit" type="submit" name="change_room" value="<?php echo get_vocab("change") ?>">
+				<br /><br /><br /><br /><br /><br />
+				<input class="reset" type="reset" name="reset_room" 
+						value=" <?php echo get_vocab("reset") ?> ">				
+			</td>
+			<td>
+				<!-- <label for="room_unauth_users"></label> -->
+				<select id="room_unauth_users" name="room_unauth_users[]" multiple="multiple" size="15">
+				<?php
+					$sql3="SELECT u.ID, u.user_login, p.room_id 
+										FROM mrbs_users AS u 
+												LEFT OUTER JOIN mrbs_permissions AS p 
+													ON u.user_login=p.user_name AND room_id=$room 
+										WHERE u.level < 2 
+										ORDER BY u.user_login";
+					$res3 = sql_query($sql3);
+
+						//Error Trapping
+				   if (!$res3)
+					  {
+					fatal_error(FALSE, "Fatal error: " . sql_error);  // should not happen?
+					  }
+					if (sql_count($res3) == 0)
+					  {
+					fatal_error(FALSE, "Problem with permissions: " . sql_error);  // should not happen?
+					  }
+				
+					//Populate list
+					for ($i = 0; ($row_perm = sql_row_keyed($res3, $i)); $i++)
+					  {
+						
+						if ($row_perm['room_id'] != $room)
+							{
+								//echo " selected=\"selected\"";
+								echo "<option value=\"" . $row_perm['user_login'] . "\"";
+								echo ">" . $row_perm['user_login'] . "</option>\n";
+							}
+						
+					  }
+
+				?>
+				</select>
+			</td>
+		</tr>
+	</table></div>
+
+	<div id="edit_area_room_submit_back">
+		<input class="submit" type="submit" name="change_done" value="<?php echo get_vocab("backadmin") ?>">
+	</div> 
+
+
+	
+  <!--</fieldset>-->
+</form>
 <?php
 }
 ?>
-
-
 
 <?php
 if (!empty($area))
@@ -263,102 +405,106 @@ if (!empty($area))
   $enough_slots = TRUE;
   
   if (isset($change_area))  // we're on the second pass through
-  {
-    // validate email addresses
-    $valid_email = validate_email_list($area_admin_email);
-    
-    if (!$enable_periods)
-    { 
-      // Avoid divide by zero errors
-      if ($area_res_mins == 0)
-      {
-        $valid_resolution = FALSE;
-      }
-      else
-      {
-        // Check morningstarts, eveningends, and resolution for consistency
-        $start_first_slot = ($area_morningstarts*60) + $area_morningstarts_minutes;   // minutes
-        $start_last_slot  = ($area_eveningends*60) + $area_eveningends_minutes;       // minutes
-        $start_difference = ($start_last_slot - $start_first_slot);         // minutes
-        if (($start_difference < 0) or ($start_difference%$area_res_mins != 0))
-        {
-          $valid_resolution = FALSE;
-        }
-      
-        // Check that the number of slots we now have is no greater than $max_slots
-        // defined in the config file - otherwise we won't generate enough CSS classes
-        $n_slots = ($start_difference/$area_res_mins) + 1;
-        if ($n_slots > $max_slots)
-        {
-          $enough_slots = FALSE;
-        }
-      }
-    }
-    
-    // If everything is OK, update the database
-    if ((FALSE != $valid_email) && (FALSE != $valid_resolution) && (FALSE != $enough_slots))
-    {
-      $sql = "UPDATE $tbl_area SET area_name='" . addslashes($area_name)
-        . "', area_admin_email='" . addslashes($area_admin_email) . "'";
-      if (!$enable_periods)
-      {
-        $sql .= ", resolution=" . $area_res_mins * 60
-              . ", default_duration=" . $area_def_duration_mins * 60
-              . ", morningstarts=" . $area_morningstarts
-              . ", morningstarts_minutes=" . $area_morningstarts_minutes
-              . ", eveningends=" . $area_eveningends
-              . ", eveningends_minutes=" . $area_eveningends_minutes;
-      }
-      $sql .= ", private_enabled=" . $area_private_enabled
-            . ", private_default=" . $area_private_default
-            . ", private_mandatory=" . $area_private_mandatory
-            . ", private_override='" . $area_private_override . "'";
-            
-      $sql .= " WHERE id=$area";
-      if (sql_command($sql) < 0)
-      {
-        fatal_error(0, get_vocab("update_area_failed") . sql_error());
-      }
-    }
+	  {
+		// validate email addresses
+		$valid_email = validate_email_list($area_admin_email);
+		
+		if (!$enable_periods)
+			{ 
+				  // Avoid divide by zero errors
+				  if ($area_res_mins == 0)
+					  {
+						$valid_resolution = FALSE;
+					  }
+				  else
+					  {
+							// Check morningstarts, eveningends, and resolution for consistency
+							$start_first_slot = ($area_morningstarts*60) + $area_morningstarts_minutes;   // minutes
+							$start_last_slot  = ($area_eveningends*60) + $area_eveningends_minutes;       // minutes
+							$start_difference = ($start_last_slot - $start_first_slot);         // minutes
+							
+							if (($start_difference < 0) or ($start_difference%$area_res_mins != 0))
+								{
+								  $valid_resolution = FALSE;
+								}
+						  
+							// Check that the number of slots we now have is no greater than $max_slots
+							// defined in the config file - otherwise we won't generate enough CSS classes
+							$n_slots = ($start_difference/$area_res_mins) + 1;
+							
+							if ($n_slots > $max_slots)
+								{
+								  $enough_slots = FALSE;
+								}
+					   }
+			}
+	  
+	  
+			// If everything is OK, update the database
+			if ((FALSE != $valid_email) && (FALSE != $valid_resolution) && (FALSE != $enough_slots))
+			{
+				  $sql = "UPDATE $tbl_area SET area_name='" . addslashes($area_name)
+					. "', area_admin_email='" . addslashes($area_admin_email) . "'";
+				  if (!$enable_periods)
+				  {
+					$sql .= ", resolution=" . $area_res_mins * 60
+						  . ", default_duration=" . $area_def_duration_mins * 60
+						  . ", morningstarts=" . $area_morningstarts
+						  . ", morningstarts_minutes=" . $area_morningstarts_minutes
+						  . ", eveningends=" . $area_eveningends
+						  . ", eveningends_minutes=" . $area_eveningends_minutes;
+				  }
+				  
+				  $sql .= ", private_enabled=" . $area_private_enabled
+						. ", private_default=" . $area_private_default
+						. ", private_mandatory=" . $area_private_mandatory
+						. ", private_override='" . $area_private_override . "'";
+						
+				  $sql .= " WHERE id=$area";
+				  
+				  if (sql_command($sql) < 0)
+				  {
+					fatal_error(0, get_vocab("update_area_failed") . sql_error());
+				  }
+			}
+		
   }  // if isset($change_area)
 
   $res = sql_query("SELECT * FROM $tbl_area WHERE id=$area LIMIT 1");
   if (! $res)
-  {
-    fatal_error(0, get_vocab("error_area") . $area . get_vocab("not_found"));
-  }
+	  {
+		fatal_error(0, get_vocab("error_area") . $area . get_vocab("not_found"));
+	  }
   $row = sql_row_keyed($res, 0);
+  
   sql_free($res);
+  
   // Get the settings for this area, from the database if they are there, otherwise from
   // the config file.    A little bit inefficient repeating the SQL query
   // we've just done, but it makes the code simpler and this page is not used very often.
   get_area_settings($area);
+  
 ?>
 
 <form class="form_general" action="edit_area_room.php" method="post">
-  <fieldset class="admin">
-  <legend><?php echo get_vocab("editarea") ?></legend>
-  
-    <fieldset>
-    <legend></legend>
-      <?php
-      if (FALSE == $valid_email)
-      {
-        echo "<p class=\"error\">" .get_vocab('invalid_email') . "</p>\n";
-      }
-      if (FALSE == $valid_resolution)
-      {
-        echo "<p class=\"error\">" .get_vocab('invalid_resolution') . "</p>\n";
-      }
-      if (FALSE == $enough_slots)
-      {
-        echo "<p class=\"error\">" .get_vocab('too_many_slots') . "</p>\n";
-      }
-      ?>
-    </fieldset>
-  
-    <fieldset>
-    <legend><?php echo get_vocab("general_settings")?></legend>
+
+
+	  <?php
+	  if (FALSE == $valid_email)
+	  {
+		echo "<p class=\"error\">" .get_vocab('invalid_email') . "</p>\n";
+	  }
+	  if (FALSE == $valid_resolution)
+	  {
+		echo "<p class=\"error\">" .get_vocab('invalid_resolution') . "</p>\n";
+	  }
+	  if (FALSE == $enough_slots)
+	  {
+		echo "<p class=\"error\">" .get_vocab('too_many_slots') . "</p>\n";
+	  }
+	  ?>
+
+
       <input type="hidden" name="area" value="<?php echo $row["id"]?>">
     
       <div>
@@ -370,12 +516,15 @@ if (!empty($area))
       <label for="area_admin_email"><?php echo get_vocab("area_admin_email") ?>:</label>
       <input type="text" id="area_admin_email" name="area_admin_email" maxlength="75" value="<?php echo htmlspecialchars($row["area_admin_email"]); ?>">
       </div>
-    </fieldset>
+
     
     <?php
     if (!$enable_periods)
     {
     ?>
+	
+	<!-- ************** JAVA Script   *********************** -->
+	
       <script type="text/javascript">
       //<![CDATA[
       
@@ -479,10 +628,9 @@ if (!empty($area))
         } // function changeSelect
         
       //]]>
-      </script>
+      </script>   <!-- //End JAVA Script -->
       
-      <fieldset>
-      <legend><?php echo get_vocab("time_settings")?></legend>
+		<?php echo get_vocab("time_settings")?>
       <div class="div_time">
         <label><?php echo get_vocab("area_first_slot_start")?>:</label>
         <?php
@@ -573,20 +721,20 @@ if (!empty($area))
       echo "</div>\n";  // last_slot
       ?>
       
+	  <!-- More JAVA Script -->
       <script type="text/javascript">
       //<![CDATA[
         writeSelect(<?php echo "$morningstarts, $morningstarts_minutes, $eveningends, $eveningends_minutes, $resolution/60" ?>);
       //]]>
       </script>
-      
+
       <?php
     }
     
     ?>
-    </fieldset>
+
     
-    <fieldset>
-    <legend><?php echo get_vocab("private_settings")?></legend>
+		<?php echo get_vocab("private_settings")?>
       <div>
         <label for="area_private_enabled"><?php echo get_vocab("allow_private")?>:</label>
         <?php $checked = ($private_enabled) ? " checked=\"checked\"" : "" ?>
@@ -616,10 +764,8 @@ if (!empty($area))
           </label>
         </div>
       </div>
-    </fieldset>
-    
-    <fieldset>
-    <legend><?php echo get_vocab("private_display")?></legend>
+	  
+		<?php echo get_vocab("private_display")?>
       <label>
         <?php echo get_vocab("private_display_label")?>
         <span id="private_display_caution">
@@ -649,19 +795,14 @@ if (!empty($area))
           </label>
         </div>
       </div>
-    </fieldset>
-    
-    <fieldset class="submit_buttons">
-    <legend></legend>
+
       <div id="edit_area_room_submit_back">
         <input class="submit" type="submit" name="change_done" value="<?php echo get_vocab("backadmin") ?>">
       </div>
       <div id="edit_area_room_submit_save">
         <input class="submit" type="submit" name="change_area" value="<?php echo get_vocab("change") ?>">
       </div>
-    </fieldset>
-    
-  </fieldset>
+
 </form>
 <?php
 }

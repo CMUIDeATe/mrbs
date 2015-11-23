@@ -23,14 +23,12 @@ if (isset($auth['session']))
 function getAuthorised($level)
 {
   global $auth;
-
   $user = getUserName();
   if(isset($user) == FALSE)
-  {
-    authGet();
-    return 0;
-  }
-
+	  {
+		authGet();
+		return 0;
+	  }
   return authGetUserLevel($user) >= $level;
 }
 

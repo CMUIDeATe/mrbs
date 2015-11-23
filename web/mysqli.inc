@@ -121,14 +121,16 @@ function sql_mysqli_row ($r, $i, $db_conn = null)
 function sql_mysqli_row_keyed ($r, $i, $db_conn = null)
 {
   sql_mysqli_ensure_handle($db_conn);
-
-  if ($i >= $r->num_rows)
+   	
+   if ($i >= mysqli_num_rows($r))
   {
-    $r->close();
+    
+	mysqli_free_result($r);
     return 0;
   }
-  $r->data_seek($i);
-  return $r->fetch_array();
+  mysqli_data_seek($r, $i);
+
+  return mysqli_fetch_array($r);
 }
 
 

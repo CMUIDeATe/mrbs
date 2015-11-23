@@ -18,18 +18,8 @@
 
 // $Id: auth_db_ext.inc 1115 2009-05-28 22:23:30Z jberanek $
 
-
-/* authValidateUser($user, $pass)
- * 
- * Checks if the specified username/password pair are valid
- * 
- * $user  - The user name
- * $pass  - The password
- * 
- * Returns:
- *   0        - The pair are invalid or do not exist
- *   non-zero - The pair are valid
- */
+include_once('wp-helpers/class-phpass.php' );
+//include_once('C:/wamp/www/sandbox/wordpress/wp-includes/class-phpass.php' );
 
 function authValidateUser($user, $pass)
 {
@@ -41,7 +31,7 @@ function authValidateUser($user, $pass)
 
   if (empty($auth['db_ext']['db_system']))
   {
-    $auth['db_ext']['db_system'] = 'mysql';
+    $auth['db_ext']['db_system'] = 'mysqli';
   }
 
   $conn = sql_connect($auth['db_ext']['db_system'],
@@ -50,15 +40,21 @@ function authValidateUser($user, $pass)
                       $auth['db_ext']['db_password'],
                       $auth['db_ext']['db_name']);
 
-  $user = addslashes($user);
+  // wordpress' username that his password going to compare
+	$user_name = htmlspecialchars($user,ENT_QUOTES);
+
+  // plain password to compare
+	$password = $pass;
+
+	$hasher = new PasswordHash(8, TRUE);
 
   $query = "SELECT " . $auth['db_ext']['column_name_password'] .
            " FROM " . $auth['db_ext']['db_table'] .
-           " WHERE ". $auth['db_ext']['column_name_username'] . "='$user'";
+           " WHERE ". $auth['db_ext']['column_name_username'] . "='$user_name'";
 
-  $r = sql_query($query, $conn);
+	$r = sql_query($query, $conn);
 
-  if ($r && (sql_count($r, $conn) == 1)) // force a unique match
+if ($r && (sql_count($r, $conn) == 1)) // force a unique match
   {
     $row = sql_row($r, 0, $conn);
 
@@ -84,6 +80,13 @@ function authValidateUser($user, $pass)
         {
           $retval = 1;
         }
+        break;
+
+	  case 'wp':
+		if ($hasher->CheckPassword( $password, $row[0] ))
+		{
+    	$retval = 1;
+		} 
         break;
 
       default:
@@ -115,27 +118,42 @@ function authValidateUser($user, $pass)
  * Returns:
  *   The users access level
  */
+
 function authGetUserLevel($user)
 {
   global $auth;
-  $admins = $auth['admin'];
-  // User not logged in, user level '0'
-  if(!isset($user))
+
+  $retval = 0;
+
+  if (empty($auth['db_ext']['db_system']))
   {
-    return 0;
+    $auth['db_ext']['db_system'] = 'mysqli';
   }
 
-  // Check if the user is can modify
-  for($i = 0; isset($admins[$i]); $i++)
+  $conn = sql_connect($auth['db_ext']['db_system'],
+                      $auth['db_ext']['db_host'],
+                      $auth['db_ext']['db_username'],
+                      $auth['db_ext']['db_password'],
+                      $auth['db_ext']['db_name']);
+
+  // wordpress' username that level going to compare
+	$user_name = htmlspecialchars($user,ENT_QUOTES);
+
+
+  $query = "SELECT " . $auth['db_ext']['column_name_level'] .
+           " FROM " . $auth['db_ext']['db_table'] .
+           " WHERE ". $auth['db_ext']['column_name_username'] . "='$user_name'";
+
+	$r = sql_query($query, $conn);
+
+if ($r && (sql_count($r, $conn) == 1)) // force a unique match
   {
-    if(strcasecmp($user, $admins[$i]) == 0)
-    {
-      return 2;
-    }
+    $row = sql_row($r, 0, $conn);
+	$retval = $row[0];
   }
 
-  // Everybody else is access level '1'
-  return 1;
+return $retval;
+
 }
 
 ?>

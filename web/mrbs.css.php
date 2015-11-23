@@ -405,7 +405,7 @@ span#del_no  {display:block; position: absolute; left: 50%; margin-left: 1em; fo
 
 /* ------------ EDIT_AREA_ROOM.PHP ------------------*/
 .edit_area_room .form_general fieldset fieldset {padding-top: 0.5em; padding-bottom: 0.5em}
-.edit_area_room .form_general fieldset fieldset legend {font-size: small; font-style: italic; font-weight: normal}
+.edit_area_room .form_general fieldset fieldset legend {font-size: medium; font-style: italic; font-weight: normal}
 span#private_display_caution {display: block; margin-top: 1em; font-style: italic; font-weight: normal}
 
 
@@ -494,7 +494,7 @@ form.form_general#db_logon    {min-width: <?php echo $db_logon_form_min_width ?>
 .form_general .group      label {clear: none; width: auto; max-width: 100%; font-weight: normal; overflow: visible}
 
 .form_general input {
-    display: block; float: left; margin-left: <?php echo $general_gap ?>em; 
+    display: block; float: left; margin-left: <?php echo $general_gap ?>em; margin-right: 1.0em;
     font-family: <?php echo $standard_font_family ?>; font-size: small
 }
 .edit_entry     .form_general input {width: <?php echo $edit_entry_textarea_width ?>em}
@@ -512,7 +512,7 @@ form.form_general#db_logon    {min-width: <?php echo $db_logon_form_min_width ?>
     margin-left: <?php echo $general_gap ?>em; margin-bottom: 0.5em;
     font-family: <?php echo $standard_font_family ?>; font-size: small
 }
-.form_general select {float: left; margin-left: <?php echo $general_gap ?>em; margin-right: -0.5em; margin-bottom: 0.5em}
+.form_general select {float: left; margin-left: <?php echo $general_gap ?>em; margin-right: -0.5em; margin-bottom: 0.5em; width: 160px;}
 .form_general input.radio {margin-top: 0.1em}
 .form_general input.checkbox {margin-top: 0.1em}
 .edit_area_room .form_general input.checkbox {width: auto; margin-left: <?php echo $general_gap ?>em}

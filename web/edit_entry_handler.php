@@ -173,6 +173,26 @@ if ($name == '')
   print_footer(TRUE);
 }       
 
+
+// Check to see if the maximum number of days out was exceeded
+if(!getAuthorised(2))
+  {
+    $datenow = time();
+    $resdate = mktime(0,0,0,$month,$day,$year);
+    $daydiff = floor(($resdate - $datenow) / (60 * 60 * 24));
+    if($daydiff > $maxfuturedays)
+      {
+	print_header($day, $month, $year, $area, isset($room) ? $room : "");
+?>
+	<h1><?php echo get_vocab('invalid_booking'); ?></h1>
+	<p>
+	  <?php echo get_vocab('future_prefix') . $maxfuturedays . get_vocab('future_suffix'); ?>
+        <p>
+<?php
+	   print_footer(TRUE);
+      }
+    }
+
 if ($rep_type  == 2 || $rep_type == 6)
 {
   $got_rep_day = 0;
@@ -366,11 +386,95 @@ else
   $ignore_id = 0;
 }
 
+// Check to see if the user has permission
+if(!getAuthorised(2))
+  {
+    $sql = "SELECT * FROM $tbl_permissions where user_name='" . getUserName() . "' and room_id=$room";
+   
+    $res = sql_query($sql);
+    if (! $res)
+      {
+	fatal_error(1, sql_error());
+      }
+    if (sql_count($res) != 1)
+      {
+	print_header($day, $month, $year, $area, isset($room) ? $room : "");
+?>
+	<h1><?php echo get_vocab('invalid_booking'); ?></h1>
+	<p>
+	  <?php echo "You do not have permission to reserve this equipment."; ?>
+        </p>
+
+<?php
+	print_footer(TRUE);
+      }
+
+    sql_free($res);
+
+  }
+
+
 // Acquire mutex to lock out others trying to book the same slot(s).
 if (!sql_mutex_lock("$tbl_entry"))
 {
   fatal_error(1, get_vocab("failed_to_acquire"));
 }
+
+// Check to see if the maximum number of hours will be exceeded for today
+if(!getAuthorised(2))
+  {
+    $resdaystart = mktime(0,0,0,$month,$day,$year);
+    $resdayend = mktime(23,59,59,$month,$day,$year);
+
+    $sql = "SELECT sum(timediff) AS hours FROM (SELECT (end_time - start_time) / (60 * 60) AS timediff from $tbl_entry where create_by='" . getUserName() . "' and start_time>=$resdaystart and end_time<=$resdayend and room_id=$room) a";
+   
+    $res = sql_query($sql);
+    if (! $res)
+      {
+	fatal_error(1, sql_error());
+      }
+    if (sql_count($res) != 1)
+      {
+	fatal_error(1, sql_error());
+      }
+
+    $row = sql_row_keyed($res, 0);
+    $hrsused = $row['hours'];
+    sql_free($res);
+
+    $sql = "SELECT max_daily_hours AS hours FROM $tbl_room WHERE id=$room";
+   
+    $res = sql_query($sql);
+    if (! $res)
+      {
+	fatal_error(1, sql_error());
+      }
+    if (sql_count($res) != 1)
+      {
+	fatal_error(1, sql_error());
+      }
+
+    $row = sql_row_keyed($res, 0);
+    $hrsallowed = $row['hours'];
+    sql_free($res);
+
+    $reshrs = ($endtime - $starttime) / (60 * 60);
+
+    if (($reshrs + $hrsused) > $hrsallowed)
+      {
+	print_header($day, $month, $year, $area, isset($room) ? $room : "");
+?>
+	<h1><?php echo get_vocab('invalid_booking'); ?></h1>
+	<p>
+	  <?php echo "This equipment can only reserved for $hrsallowed hours per day. You already have $hrsused hour(s) reserved; the additional $reshrs hour(s) would put you over the limit."; ?>
+        </p>
+
+<?php
+	print_footer(TRUE);
+      }
+
+  }
+
 
 // Validate the booking for (a) conflicting bookings and (b) conformance to rules
 $valid_booking = TRUE;
@@ -408,7 +512,7 @@ foreach ( $rooms as $room_id )
     else
     {
       $valid_booking = FALSE;
-      $rules_broken[] = get_vocab("too_may_entrys");
+      $rules_broken[] = get_vocab("too_many_entrys");
     }
   }
   else

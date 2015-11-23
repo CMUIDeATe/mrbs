@@ -17,7 +17,7 @@ require "config/secrets.php";
 // When upgrading an existing installation, this should be set to the
 // timezone the web server runs in.
 //
-//$timezone = "Europe/London";
+$timezone = "America/New_York";
 
 
 /*******************
@@ -30,32 +30,32 @@ require "config/secrets.php";
 // lengths in the database then you should change the values here, and vice versa.
 $maxlength['entry.name']       = 80;  // characters   (name field in entry table)
 $maxlength['area.area_name']   = 30;  // characters   (area_name field in area table)
-$maxlength['room.room_name']   = 25;  // characters   (room_name field in room table)
+$maxlength['room.room_name']   = 35;  // characters   (room_name field in room table)
 $maxlength['room.description'] = 60;  // characters   (description field in room table)
-$maxlength['users.name']       = 30;  // characters   (name field in users table)
-$maxlength['users.email']      = 75;  // characters   (email field in users table)
+$maxlength['users.user_login']       = 30;  // characters   (name field in users table)
+$maxlength['users.user_email']      = 75;  // characters   (email field in users table)
 // other values for the users table need to follow the $maxlength['users.fieldname'] pattern
 
 
 /*********************************
  * Site identification information
  *********************************/
-$mrbs_admin = "Your Administrator";
-$mrbs_admin_email = "admin_email@your.org";
+$mrbs_admin = "P. Zach Ali, Technical Director";
+$mrbs_admin_email = "pzali@cmu.edu";
 
 // The company name is mandatory.   It is used in the header and also for email notifications.
 // The company logo, additional information and URL are all optional.
 
-$mrbs_company = "Your Company";   // This line must always be uncommented ($mrbs_company is used in various places)
+$mrbs_company = "IDeATe";   // This line must always be uncommented ($mrbs_company is used in various places)
 
 // Uncomment this next line to use a logo instead of text for your organisation in the header
-//$mrbs_company_logo = "your_logo.gif";    // name of your logo file.   This example assumes it is in the MRBS directory
+$mrbs_company_logo = "ideateLogo.png";    // name of your logo file.   This example assumes it is in the MRBS directory
 
 // Uncomment this next line for supplementary information after your company name or logo
-//$mrbs_company_more_info = "You can put additional information here";  // e.g. "XYZ Department"
+$mrbs_company_more_info = "Resource Reservations";  // e.g. "XYZ Department"
 
 // Uncomment this next line to have a link to your organisation in the header
-//$mrbs_company_url = "http://www.your_organisation.com/";
+$mrbs_company_url = "http://ideate.andrew.cmu.edu/";
 
 // This is to fix URL problems when using a proxy in the environment.
 // If links inside MRBS appear broken, then specify here the URL of
@@ -64,7 +64,7 @@ $mrbs_company = "Your Company";   // This line must always be uncommented ($mrbs
 // It is also recommended that you set this if you intend to use email
 // notifications, to ensure that the correct URL is displayed in the
 // notification.
-$url_base = "";
+$url_base = "http://ideate.andrew.cmu.edu/reservations/";
 
 
 /*******************
@@ -78,7 +78,7 @@ $url_base = "";
 //       be able to do it by changing the values in the theme file.    More advanced styling changes
 //       can be made by changing the rules in the CSS file.
 //   (b) the header:  the header.inc file which contains the function used for producing the header.
-//       This enables organisations to plug in their own header functions quite easily, in cases where
+//       This enables organizations to plug in their own header functions quite easily, in cases where
 //       the desired corporate look and feel cannot be changed using the CSS alone and the mark-up
 //       itself needs to be changed.
 //
@@ -90,7 +90,7 @@ $url_base = "";
 
 // "default"        Default MRBS theme
 // "classic126"     Same colour scheme as MRBS 1.2.6
-
+// "dfab"   Also use for IDEATE
 $theme = "default";
 
 
@@ -135,11 +135,11 @@ $default_duration = (60 * 60);
 // being 18:30 -> 19:00
 
 // The beginning of the first slot of the day
-$morningstarts         = 7;   // must be integer in range 0-23
+$morningstarts         = 9;   // must be integer in range 0-23
 $morningstarts_minutes = 0;   // must be integer in range 0-59
 
 // The beginning of the last slot of the day
-$eveningends           = 18;  // must be integer in range 0-23
+$eveningends           = 21;  // must be integer in range 0-23
 $eveningends_minutes   = 30;   // must be integer in range 0-59
 
 // Example 1.
@@ -156,6 +156,9 @@ $eveningends_minutes   = 30;   // must be integer in range 0-59
 // is too large, except for the fact that more CSS than necessary will be generated.  (The variable
 // is ignored if $times_along_top is set to TRUE).
 $max_slots = 60;
+
+// Restrict the number of days into the future that a reservation can be made
+$maxfuturedays = 14;
 
 
 // PERIODS SETTINGS
@@ -238,13 +241,13 @@ $dateformat = 0;
 
 // Time format in pages. 0 to show dates in 12 hour format, 1 to show them
 // in 24 hour format
-$twentyfourhour_format = 1;
+$twentyfourhour_format = 0;
 
 // Results per page for searching:
 $search["count"] = 20;
 
 // Page refresh time (in seconds). Set to 0 to disable
-$refresh_rate = 0;
+$refresh_rate = 300;
 
 // Trailer type.   FALSE gives a trailer complete with links to days, weeks and months before
 // and after the current date.    TRUE gives a simpler trailer that just has links to the
@@ -284,7 +287,7 @@ $default_view = "day";
 // Room numbers can be determined by looking at the Edit or Delete URL for a
 // room on the admin page.
 // Default is 0
-$default_room = 0;
+$default_room = 1;
 
 // Define clipping behaviour for the cells in the day and week views.
 // Set to TRUE if you want the cells in the day and week views to be clipped.   This
@@ -365,7 +368,7 @@ $auth["session"] = "php"; // How to get and keep the user ID. One of
            // "http" "php" "cookie" "ip" "host" "nt" "omni"
            // "remote_user"
 
-$auth["type"] = "config"; // How to validate the user/password. One of "none"
+$auth["type"] = "db_ext"; // How to validate the user/password. One of "none"
                           // "config" "db" "db_ext" "pop3" "imap" "ldap" "nis"
                           // "nw" "ext".
 
@@ -413,18 +416,18 @@ $auth["params"] = "";
 
 // 'auth_ldap' configuration settings
 // Where is the LDAP server
-//$ldap_host = "localhost";
+$ldap_host = "localhost";
 // If you have a non-standard LDAP port, you can define it here
-//$ldap_port = 389;
+$ldap_port = 389;
 // If you do not want to use LDAP v3, change the following to false
 $ldap_v3 = true;
 // If you want to use TLS, change the following to true
 $ldap_tls = false;
 // LDAP base distinguish name
 // See AUTHENTICATION for details of how check against multiple base dn's
-//$ldap_base_dn = "ou=organizationalunit,dc=my-domain,dc=com";
+$ldap_base_dn = "dc=ideate,dc=andrew,dc=cmu,dc=edu";
 // Attribute within the base dn that contains the username
-//$ldap_user_attrib = "uid";
+$ldap_user_attrib = "uid";
 // If you need to search the directory to find the user's DN to bind
 // with, set the following to the attribute that holds the user's
 // "username". In Microsoft AD directories this is "sAMAccountName"
@@ -432,7 +435,7 @@ $ldap_tls = false;
 // If you need to bind as a particular user to do the search described
 // above, specify the DN and password in the variables below
 // $ldap_dn_search_dn = "cn=Search User,ou=Users,dc=some,dc=company";
-// $ldap_dn_search_password = "some-password";
+// $ldap_dn_search_password = "uidNumber";
 
 // 'auth_ldap' extra configuration for ldap configuration of who can use
 // the system
@@ -446,9 +449,9 @@ $ldap_tls = false;
 // 'auth_imap' configuration settings
 // See AUTHENTICATION for details of how check against multiple servers
 // Where is the IMAP server
-$imap_host = "imap-server-name";
+//$imap_host = "cyrus.andrew.cmu.edu";
 // The IMAP server port
-$imap_port = "143";
+//imap_port = "993";
 
 // 'auth_imap_php' configuration settings
 $auth["imap_php"]["hostname"] = "localhost";
@@ -507,12 +510,12 @@ define ("MAIL_ADMIN_ALL", FALSE);
 // Set to TRUE is you want to show entry details in email, otherwise only a
 // link to view_entry is provided. Irrelevant for deleted entries. Default is
 // FALSE.
-define ("MAIL_DETAILS", FALSE);
+define ("MAIL_DETAILS", TRUE);
 
 // Set to TRUE if you want BOOKER to receive a copy of his entries as well any
 // changes (depends of MAIL_ADMIN_ALL, see below). Default is FALSE. To know
 // how to set mrbs to send emails to users/bookers, see INSTALL.
-define ("MAIL_BOOKER", FALSE);
+define ("MAIL_BOOKER", TRUE);
 
 // If MAIL_BOOKER is set to TRUE (see above) and you use an authentication
 // scheme other than 'auth_db', you need to provide the mail domain that will
@@ -527,7 +530,7 @@ define ("MAIL_USERNAME_SUFFIX", '');
 
 // Set the name of the Backend used to transport your mails. Either "mail",
 // "smtp" or "sendmail". Default is 'mail'. See INSTALL for more details.
-define ("MAIL_ADMIN_BACKEND", "mail");
+define ("MAIL_ADMIN_BACKEND", "smtp");
 
 /*******************
  * Sendmail settings
@@ -600,7 +603,8 @@ $disable_automatic_language_changing = 0;
 // Set this to a valid locale (for the OS you run the MRBS server on)
 // if you want to override the automatic locale determination MRBS
 // performs
-$override_locale = "";
+$override_locale = "en_US.utf-8";
+//$override_locale = "";  //Use this on Windows based
 
 // faq file language selection. IF not set, use the default english file.
 // IF your language faq file is available, set $faqfilelang to match the
@@ -629,15 +633,15 @@ require_once "language.inc";
 // be shown in the day view color-key, and not offered in the type selector
 // for new or edited entries.
 
-// $typel["A"] = "A";
-// $typel["B"] = "B";
-// $typel["C"] = "C";
-// $typel["D"] = "D";
-$typel["E"] = get_vocab("external");
+$typel["A"] = "Physical Computing";
+$typel["B"] = "Integrative Media";
+$typel["C"] = "Experimental Fab";
+$typel["D"] = "Class";
+$typel["E"] = "Closed";
 // $typel["F"] = "F";
 // $typel["G"] = "G";
 // $typel["H"] = "H";
-$typel["I"] = get_vocab("internal");
+$typel["I"] = "Other";
 // $typel["J"] = "J";
 
 
@@ -656,9 +660,9 @@ $typel["I"] = get_vocab("internal");
  ********************************************************/
 
 // Disable magic quoting on database returns:
-set_magic_quotes_runtime(0);
+//set_magic_quotes_runtime(0);
 
 // Make sure notice errors are not reported, they can break mrbs code:
-error_reporting (E_ALL ^ E_NOTICE);
+//error_reporting (E_ALL ^ E_NOTICE);
 
 ?>

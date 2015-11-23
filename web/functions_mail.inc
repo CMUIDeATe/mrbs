@@ -944,7 +944,8 @@ function sendMail($recipients, $subject, $body, $charset = 'us-ascii',
   }
 
   // Call to the PEAR::Mail class
-  $mail_object =& Mail::factory($backend, $params);
+  //$mail_object =& Mail::factory($backend, $params);
+  $mail_object = Mail::factory($backend, $params);
   $result = $mail_object->send($recipients, $headers, $body);
 
   if (is_object($result))

@@ -130,6 +130,7 @@ if ($res && (sql_count($res)>1))
       echo htmlspecialchars($row['area_name']) . "</span></a></li>\n";
     }  
     echo ("</ul>\n");
+	
   }
   echo "</div>\n";
 }
@@ -137,9 +138,10 @@ if ($res && (sql_count($res)>1))
 // Draw the three month calendars
 minicals($year, $month, $day, $area, $room, 'day');
 echo "</div>";
-
 ?>
+
 </div>
+
 <?php
 
 //y? are year, month and day of yesterday
@@ -388,8 +390,6 @@ else
   // the timetohighlight parameter duplicated each time you click.
   $hilite_url="day.php?year=$year&amp;month=$month&amp;day=$day&amp;area=$area$room_param&amp;timetohighlight";
   
-  
-   
   $row_class = "even_row";
   
   // We can display the table in two ways

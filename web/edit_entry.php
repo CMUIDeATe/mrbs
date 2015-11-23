@@ -190,7 +190,14 @@ else
 {
   // It is a new booking. The data comes from whichever button the user clicked
   $edit_type   = "series";
-  $name        = "";
+  if (getAuthorised(2))
+    {
+      $name    = "";
+    }
+  else
+    {
+      $name    = str_replace("@andrew.cmu.edu", "", getUserName());
+    }
   $create_by   = getUserName();
   $description = "";
   $start_day   = $day;
@@ -204,7 +211,23 @@ else
     $default_duration = (60 * 60);
   }
   $duration    = ($enable_periods ? 60 : $default_duration);
-  $type        = "I";
+
+  $sql = "select Affiliation from $tbl_users where user_login='" . getUserName() . "'";
+   
+  $res = sql_query($sql);
+  if (! $res)
+  {
+    fatal_error(1, sql_error());
+  }
+  if (sql_count($res) != 1)
+  {
+    fatal_error(1, get_vocab("username") . getUserName() . get_vocab("not_found"));
+  }
+
+  $row = sql_row_keyed($res, 0);
+  $type = $row['Affiliation'];
+  sql_free($res);
+
   $room_id     = $room;
   unset($id);
 
@@ -466,10 +489,16 @@ else
   <legend><?php echo get_vocab($token); ?></legend>
 
     <div id="div_name">
-      <label for="name"><?php echo get_vocab("namebooker")?>:</label>
+      
+	  <label for="name"><?php echo get_vocab("namebooker")?>:</label>
+	  
       <?php
-      echo "<input id=\"name\" name=\"name\" maxlength=\"" . $maxlength['entry.name'] . "\" value=\"" . htmlspecialchars($name) . "\">\n";
+	if (getAuthorised(2)) $namereadonly="";
+	else $namereadonly="readonly=\"readonly\"";
+      echo "<input id=\"name\" name=\"name\"" . $namereadonly . " maxlength=\"" . $maxlength['entry.name'] 
+																						. "\" value=\"" . htmlspecialchars($name) . "\">\n";
       ?>
+	  
     </div>
 
     <div id="div_description">
@@ -555,7 +584,7 @@ else
           }
           else
           {
-            $units = array("minutes", "hours", "days", "weeks");
+            $units = array("minutes", "hours");
           }
 
           while (list(,$unit) = each($units))
@@ -570,8 +599,7 @@ else
           ?>
         </select>
         <div id="ad">
-          <input id="all_day" class="checkbox" name="all_day" type="checkbox" value="yes" onclick="OnAllDayClick(this)">
-          <label for="all_day"><?php echo get_vocab("all_day"); ?></label>
+          <input id="all_day" name="all_day" type="hidden" value="no">
         </div>
       </div>
     </div>
@@ -678,44 +706,62 @@ else
     <div id="div_rooms">
     <label for="rooms"><?php echo get_vocab("rooms") ?>:</label>
     <div class="group">
-      <select id="rooms" name="rooms[]" multiple="multiple" size="5">
+      <select id="rooms" name="rooms[]" <?php echo "size=\"" . (getAuthorised(2) ? "5\" multiple=\"multiple\"" : "1\"") ?> >
         <?php 
         // select the rooms in the area determined above
         $sql = "select id, room_name from $tbl_room where area_id=$area_id order by room_name";
         $res = sql_query($sql);
         if ($res)
-        {
-          for ($i = 0; ($row = sql_row_keyed($res, $i)); $i++)
-          {
-            $selected = "";
-            if ($row['id'] == $room_id)
-            {
-              $selected = "selected=\"selected\"";
-            }
-            echo "              <option $selected value=\"" . $row['id'] . "\">" . htmlspecialchars($row['room_name']) . "</option>\n";
-            // store room names for emails
-            $room_names[$i] = $row['room_name'];
-          }
-        }
+	  {
+	    for ($i = 0; ($row = sql_row_keyed($res, $i)); $i++)
+	      {
+		if(getAuthorised(2))
+		  {
+		    $selected = "";
+		    if ($row['id'] == $room_id)
+		      {
+			$selected = "selected=\"selected\"";
+		      }
+		    echo "              <option $selected value=\"" . $row['id'] . "\">" . htmlspecialchars($row['room_name']) . "</option>\n";
+		  }
+		else
+		  {
+		    if ($row['id'] == $room_id)
+		      {
+			$selected = "selected=\"selected\"";
+			echo "              <option $selected value=\"" . $row['id'] . "\">" . htmlspecialchars($row['room_name']) . "</option>\n";	   
+		      } 
+		  }
+		    // store room names for emails
+		$room_names[$i] = $row['room_name'];
+	      }
+	  }
         ?>
       </select>
-      <span><?php echo get_vocab("ctrl_click") ?></span>
       </div>
     </div>
     <div id="div_type">
-      <label for="type"><?php echo get_vocab("type")?>:</label>
+	  <label for=<?php echo (getAuthorised(2) ? "\"type\"" : "\"typedisplay\""); ?>><?php echo get_vocab("type")?>:</label>
      <div class="group">    
-      <select id="type" name="type">
-        <?php
-        for ($c = "A"; $c <= "Z"; $c++)
-        {
-          if (!empty($typel[$c]))
-          { 
-            echo "        <option value=\"$c\"" . ($type == $c ? " selected=\"selected\"" : "") . ">$typel[$c]</option>\n";
-          }
-        }
-        ?>
-      </select>
+	<?php
+	if(getAuthorised(2))
+	  {
+	    echo "      <select id=\"type\" name=\"type\">";
+	    for ($c = "A"; $c <= "Z"; $c++)
+	      {
+		if (!empty($typel[$c]))
+		  { 
+		    echo "        <option value=\"$c\"" . ($type == $c ? " selected=\"selected\"" : "") . ">$typel[$c]</option>\n";
+		  }
+	      }
+	    echo "      </select>";
+	  }
+	else
+	  {
+	    echo "      <input id=\"typedisplay\" name=\"typedisplay\" readonly=\"readonly\" value=\"" . $typel[$type] . "\"></input>";
+	    echo "      <input id=\"type\" name=\"type\" type=\"hidden\" value=\"$type\"></input>";
+	  }
+?>
       <?php 
       if ($private_enabled) 
       { ?>
@@ -736,6 +782,10 @@ else
      </div>
     </div>
 
+  <?php
+  if(getAuthorised(2))
+    {
+  ?>  
 
     <?php
     if ($edit_type == "series")
@@ -839,6 +889,14 @@ else
     
     // In the section below the <div> needs to be inside the <noscript> in order to pass validation
     ?>
+
+<?php
+    }
+  else
+    {
+      echo "            <input type=\"hidden\" name=\"rep_type\" value=\"0\">";
+    }
+?>
     <script type="text/javascript">
       //<![CDATA[
       document.writeln ('<div id="edit_entry_submit">');
@@ -851,7 +909,13 @@ else
         <input class="submit" type="submit" value="<?php echo get_vocab("save")?>">
       </div>
     </noscript>
+
+    <div style="margin-top: 1em; color: #247;">
+      By clicking "<?php echo get_vocab("save")?>", you acknowledge that the details of your reservation will be visible to the IDeATe community and the broader Carnegie Mellon community online and on campus signage. 
+    </div>
+
     <?php
+	
     // We might be going through edit_entry more than once, for example if we have to log on on the way.  We
     // still need to preserve the original calling page so that once we've completed edit_entry_handler we can
     // go back to the page we started at (rather than going to the default view).  If this is the first time 

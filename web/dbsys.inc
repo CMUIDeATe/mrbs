@@ -7,12 +7,13 @@ global $dbsys;
 // These variables specify the names of the tables in the database
 global $db_tbl_prefix;
 
-$tbl_area      = $db_tbl_prefix . "area";
-$tbl_entry     = $db_tbl_prefix . "entry";
-$tbl_repeat    = $db_tbl_prefix . "repeat";
-$tbl_room      = $db_tbl_prefix . "room";
-$tbl_users     = $db_tbl_prefix . "users";
-$tbl_variables = $db_tbl_prefix . "variables";
+$tbl_area        = $db_tbl_prefix . "area";
+$tbl_entry       = $db_tbl_prefix . "entry";
+$tbl_repeat      = $db_tbl_prefix . "repeat";
+$tbl_room        = $db_tbl_prefix . "room";
+$tbl_users       = "mrbs_users";
+$tbl_variables   = $db_tbl_prefix . "variables";
+$tbl_permissions = $db_tbl_prefix . "permissions";
 
 
 $db_schema_version = 6;
@@ -552,6 +553,7 @@ function sql_table_exists($table)
 function sql_connect($system, $host, $username, $password, $db_name,
                      $persist = 0)
 {
+  
   require_once "$system.inc";
 
   $f = "sql_${system}_connect";

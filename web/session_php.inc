@@ -154,6 +154,9 @@ function printLoginForm($TargetURL)
     </div>
   </fieldset>
 </form>
+<div style="color: #004b8d; margin-top: 2em;">
+  <strong>Note:</strong> If you're an IDeATe affiliate and don't have a login to this system, request one by emailing help@ideate.cmu.edu.
+</div>
 <?php
   // Print footer and exit
   print_footer(TRUE);

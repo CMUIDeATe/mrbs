@@ -156,7 +156,7 @@ if (isset($Action) && ( ($Action == "Edit") or ($Action == "Add") ))
   }
 
   /* First make sure the user is authorized */
-  if (!$initial_user_creation && !getWritable($data['name'], $user))
+  if (!$initial_user_creation && !getWritable($data['user_login'], $user))
   {
     showAccessDenied(0, 0, 0, "", "");
     exit();
@@ -201,11 +201,31 @@ if (isset($Action) && ( ($Action == "Edit") or ($Action == "Add") ))
             switch($fieldname)
             {
               case 'id':
-                echo "<input type=\"hidden\" name=\"Id\" value=\"$Id\">\n";
+                echo "<input type=\"hidden\" user_login=\"Id\" value=\"$Id\">\n";
                 break;
               case 'password':
-                echo "<input type=\"hidden\" name=\"Field_$fieldname\" value=\"". htmlspecialchars($data[$fieldname]) . "\">\n";
+                echo "<input type=\"hidden\" user_login=\"Field_$fieldname\" value=\"". htmlspecialchars($data[$fieldname]) . "\">\n";
                 break;
+	    case 'Affiliation':
+	      echo "<div>\n";
+	      echo "<label for=\Field_$fieldname\">" . get_loc_field_name($fieldname) . ":</label>\n";
+	      if($level < $min_user_editing_level)
+		{
+		  echo "<input id=\"Field_$fieldname\" user_login=\"Field_$fieldname\" value=\"" . $typel[$data[$fieldname]] . "\" disabled=\"true\"></input>\n";
+		}
+	      else
+		{
+		  echo "<select id=\"Field_$fieldname\" user_login=\"Field_$fieldname\">\n";
+		  for ($c = "A"; $c <= "Z"; $c++)
+		    {
+		      if (!empty($typel[$c]))
+			{ 
+			  echo "        <option value=\"$c\"" . ($data[$fieldname] == $c ? " selected=\"selected\"" : "") . ">$typel[$c]</option>\n";
+			}
+		    }
+		  echo "</select>\n";
+		}
+	      break;
               case 'level':
                 echo "<div>\n";
                 echo "<label for=\"Field_$fieldname\">" . get_loc_field_name($fieldname) . ":</label>\n";
@@ -251,13 +271,13 @@ if (isset($Action) && ( ($Action == "Edit") or ($Action == "Add") ))
                 echo ("<div>\n");
                 echo ("<label for=\"$html_fieldname\">" . get_loc_field_name($fieldname) . ":</label>\n");
                 echo ("<input id=\"$html_fieldname\" name=\"$html_fieldname\" type=\"text\" " .
-                      "maxlength=\"" . $maxlength['users.name'] . "\" " .
+                      "maxlength=\"" . $maxlength['mrbs_users.user_login'] . "\" " .
                      (($level < $min_user_editing_level) ? "disabled=\"disabled\" " : "") .
                       "value=\"" . htmlspecialchars($data[$fieldname]) . "\">\n");
                 // if the field was disabled then we still need to pass through the value as a hidden input
                 if ($level < $min_user_editing_level)
                 {
-                  echo "<input type=\"hidden\" name=\"Field_$fieldname\" value=\"" . $data[$fieldname] . "\">\n";
+                  echo "<input type=\"hidden\" user_login=\"Field_$fieldname\" value=\"" . $data[$fieldname] . "\">\n";
                 }
                 echo ("</div>\n");
                 break;
@@ -266,7 +286,7 @@ if (isset($Action) && ( ($Action == "Edit") or ($Action == "Add") ))
                 echo ("<div>\n");
                 echo ("<label for=\"$html_fieldname\">" . get_loc_field_name($fieldname) . ":</label>\n");
                 echo ("<input id=\"$html_fieldname\" name=\"$html_fieldname\" type=\"text\" " .
-                     (isset($maxlength["users.$fieldname"]) ? "maxlength=\"" . $maxlength["users.$fieldname"] . "\" " : "") .
+                     (isset($maxlength["mrbs_users.$fieldname"]) ? "maxlength=\"" . $maxlength["mrbs_users.$fieldname"] . "\" " : "") .
                       "value=\"" . htmlspecialchars($data[$fieldname]) . "\">\n");
                 echo ("</div>\n");
                 break;
@@ -283,6 +303,7 @@ if (isset($Action) && ( ($Action == "Edit") or ($Action == "Add") ))
                 }
                 break;
               case 'name':
+			  case 'user_login':
                 if (isset($name_not_unique) && (1 == $name_not_unique))
                 {
                   echo "<p class=\"error\">'" . htmlspecialchars($taken_name) . "' " . get_vocab('name_not_unique') . "<p>\n";
@@ -303,7 +324,7 @@ if (isset($Action) && ( ($Action == "Edit") or ($Action == "Add") ))
           {
             print "<div>\n";
             print "<label for=\"password$i\">" . get_vocab("user_password") . ":</label>\n";
-            print "<input type=\"password\" id=\"password$i\" name=\"password$i\" value=\"\">\n";
+            print "<input type=\"password\" id=\"password$i\" user_login=\"password$i\" value=\"\">\n";
             print "</div>\n";
           }
           
@@ -312,7 +333,7 @@ if (isset($Action) && ( ($Action == "Edit") or ($Action == "Add") ))
             echo "<br><em>(" . get_vocab("warning_last_admin") . ")</em>\n";
           }
           ?>
-          <input type="hidden" name="Action" value="Update">    
+          <input type="hidden" user_login="Action" value="Update">    
           <input class="submit" type="submit" value="<?php echo(get_vocab("save")); ?>">
           
         </div>
@@ -324,8 +345,8 @@ if (isset($Action) && ( ($Action == "Edit") or ($Action == "Add") ))
       {
         echo "<form id=\"form_delete_users\" method=\"post\" action=\"" . htmlspecialchars(basename($PHP_SELF)) . "\">\n";
         echo "<div>\n";
-        echo "<input type=\"hidden\" name=\"Action\" value=\"Delete\">\n";
-        echo "<input type=\"hidden\" name=\"Id\" value=\"$Id\">\n";
+        echo "<input type=\"hidden\" user_login=\"Action\" value=\"Delete\">\n";
+        echo "<input type=\"hidden\" user_login=\"Id\" value=\"$Id\">\n";
         echo "<input class=\"submit\" type=\"submit\" " . 
               (($editing_last_admin) ? "disabled=\"disabled\"" : "") .
               "value=\"" . get_vocab("delete_user") . "\">\n";
@@ -347,7 +368,7 @@ if (isset($Action) && ( ($Action == "Edit") or ($Action == "Add") ))
 if (isset($Action) && ($Action == "Update"))
 {
   // If you haven't got the rights to do this, then exit
-  $my_id = sql_query1("SELECT id FROM $tbl_users WHERE name='".addslashes($user)."' LIMIT 1");
+  $my_id = sql_query1("SELECT id FROM $tbl_users WHERE user_login='".addslashes($user)."' LIMIT 1");
   if (($level < $min_user_editing_level) && ($Id != $my_id ))
   {
     Header("Location: edit_users.php");
@@ -404,13 +425,13 @@ if (isset($Action) && ($Action == "Update"))
     }
     
     // Truncate the name field to the maximum length as a precaution.
-    $new_name = substr($new_name, 0, $maxlength['users.name']);
+    $new_name = substr($new_name, 0, $maxlength['users.user_login']);
     
     // Check that the name is unique.
     // If it's a new user, then to check to see if there are any rows with that name.
     // If it's an update, then check to see if there are any rows with that name, except
     // for that user.
-    $query = "SELECT id FROM $tbl_users WHERE name='" . addslashes($new_name) . "'";
+    $query = "SELECT id FROM $tbl_users WHERE user_login='" . addslashes($new_name) . "'";
     if ($Id >= 0)
     {
       $query .= " AND id!='$Id'";
@@ -440,12 +461,17 @@ if (isset($Action) && ($Action == "Update"))
         // so move onto the next value
         continue;
       }
-      else if ($fieldname=="name")
+      else if ($fieldname=="user_login")
       {
         // convert to lowercase so that authentication will be case insensitive
         $value = strtolower(get_form_var('Field_name', 'string'));
       }
       else if (($fieldname=="password") && ($password0!=""))
+      {
+        // Hash the password for security
+        $value=md5($password0);
+      }
+	  else if (($fieldname=="user_pass") && ($password0!=""))
       {
         // Hash the password for security
         $value=md5($password0);
@@ -631,8 +657,8 @@ if ($level >= $min_user_editing_level) /* Administrators get the right to add ne
 {
   print "<form method=\"post\" action=\"" . htmlspecialchars(basename($PHP_SELF)) . "\">\n";
   print "  <div>\n";
-  print "    <input type=\"hidden\" name=\"Action\" value=\"Add\">\n";
-  print "    <input type=\"hidden\" name=\"Id\" value=\"-1\">\n";
+  print "    <input type=\"hidden\" user_login=\"Action\" value=\"Add\">\n";
+  print "    <input type=\"hidden\" user_login=\"Id\" value=\"-1\">\n";
   print "    <input type=\"submit\" value=\"" . get_vocab("add_new_user") . "\">\n";
   print "  </div>\n";
   print "</form>\n";
@@ -640,7 +666,7 @@ if ($level >= $min_user_editing_level) /* Administrators get the right to add ne
 
 if ($initial_user_creation != 1)   // don't print the user table if there are no users
 {
-  $list = sql_query("SELECT * FROM $tbl_users ORDER BY level DESC, name");
+  $list = sql_query("SELECT * FROM $tbl_users ORDER BY level DESC, user_login");
   print "<table id=\"edit_users_list\" class=\"admin_table\">\n";
   print "<thead>\n";
   print "<tr>";
@@ -648,10 +674,10 @@ if ($initial_user_creation != 1)   // don't print the user table if there are no
   // Column headers (we don't use 'id' and 'password')
   foreach ($fields as $fieldname)
   {
-    if ($fieldname != 'id' && $fieldname != 'password')
+    if ($fieldname != 'id' && $fieldname != 'password' && $fieldname != 'ID' && $fieldname != 'user_pass')
     {
       print "<th>" . get_loc_field_name($fieldname) . "</th>";
-    }
+    } 
   }
   // Last column which is an action button
   print "<th>" . get_vocab("action") . "</th>";
@@ -667,23 +693,36 @@ if ($initial_user_creation != 1)   // don't print the user table if there are no
     // Column contents
     foreach ($line as $key=>$col_value) 
     {
-      // sql_row_keyed returns an array indexed by both index number annd key name,
+      // sql_row_keyed returns an array indexed by both index number and key name,
       // so skip past the index numbers
       if (is_int($key))
       {
         continue;
       }
+	  //echo  "<HTML>key: " . $key . "<br></HTML>";
       switch($key)
       {
         case 'id':
+		case 'ID':
           $this_id = $col_value;  // Don't display it, but remember it.
           break;
         case 'password':
+		case 'user_pass':
+		  echo "";
           break;                  // Don't display the password
         case 'level':
           echo "<td>" . get_vocab("level_$col_value") . "</td>\n";
           break;
-        default:
+      case 'Affiliation':
+		  if  (!empty($col_value))
+		  {
+			  echo "<td>" . $typel[$col_value] . "</td>\n";
+			}else
+			{
+				echo "<td>" . "&nbsp;" . "</td>\n";
+			}
+		  break;
+      default:
           echo "<td>" . ((empty($col_value)) ? "&nbsp;" : htmlspecialchars($col_value)) . "</td>\n";
           break;
       }  // end switch   
@@ -692,12 +731,12 @@ if ($initial_user_creation != 1)   // don't print the user table if there are no
     // Last column (the action button)
     print "<td>\n";
     // You can only edit a user if you have sufficient admin rights, or else if that user is yourself
-    if (($level >= $min_user_editing_level) || (strcasecmp($line['name'], $user) == 0))
+    if (($level >= $min_user_editing_level) || (strcasecmp($line['user_login'], $user) == 0))
     {
       print "<form method=\"post\" action=\"" . htmlspecialchars(basename($PHP_SELF)) . "\">\n";
       print "  <div>\n";
-      print "    <input type=\"hidden\" name=\"Action\" value=\"Edit\">\n";
-      print "    <input type=\"hidden\" name=\"Id\" value=\"$this_id\">\n";
+      print "    <input type=\"hidden\" user_login=\"Action\" value=\"Edit\">\n";
+      print "    <input type=\"hidden\" user_login=\"Id\" value=\"$this_id\">\n";
       print "    <input type=\"submit\" value=\"" . get_vocab("edit") . "\">\n";
       print "  </div>\n";
       print "</form>\n";

@@ -11,6 +11,8 @@ global $vocab; // outside of scope; needs to be denote as global
 // highlighting instead of CSS highlighting.   In particular the href string for the
 // stylesheet for browsers IE6 or below must contain the string 'ielte6'.
 ?>
+    
+    <link href='https://fonts.googleapis.com/css?family=Abel' rel='stylesheet' type='text/css'>
     <link rel="stylesheet" href="mrbs.css.php" type="text/css">
     <link rel="stylesheet" media="print" href="mrbs-print.css.php" type="text/css">
     <?php

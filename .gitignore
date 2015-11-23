@@ -1,6 +1,10 @@
 # Configuration secrets
 web/config/secrets.php
+web/config.php
 !web/config.inc.php
+
+# Apache error logs
+web/error_log
 
 # Backup files and upload logs
 WS_FTP.LOG

@@ -1,6 +1,76 @@
 <?php
 
 // $Id: functions.inc 1129 2009-06-24 15:47:32Z cimorrison $
+//
+// function print_header($day, $month, $year, $area, $room)
+//
+// function print_footer($and_exit)
+//
+// function toTimeString(&$dur, &$units)
+// 
+// function toPeriodString($start_period, &$dur, &$units)
+// 
+// function genDateSelector($prefix, $day, $month, $year)
+// 
+// function fatal_error($need_header, $message)
+// 
+// function unslashes($s)
+// 
+// function get_default_area()
+// 
+// function get_default_room($area)
+// 
+// function get_area($room)
+// 
+// function get_area_settings($area)
+// 
+// function day_name($daynumber)
+//
+// function hour_min_format()
+// 
+// function period_date_string($t, $mod_time=0)
+// 
+// function period_time_string($t, $mod_time=0)
+// 
+// function time_date_string($t)
+// 
+// function mrbs_nl2br($string)
+// 
+// function validate_email_list($list)
+// 
+// function tdcell($colclass, $slots)
+// 
+// function show_colour_key()
+// 
+// function round_t_down($t, $resolution, $am7)
+// 
+// function round_t_up($t, $resolution, $am7)
+// 
+// function make_area_select_html( $link, $current, $year, $month, $day )
+// 
+// function make_room_select_html
+// 
+// function make_room_select_html( $link, $area, $current, $year, $month, $day )
+// 
+// function is_dst ( $month, $day, $year, $hour="-1" )
+// 
+// function cross_dst ( $start, $end )
+// 
+// function is_hidden_day ($dow)
+// 
+// function is_private_event($event_flag) 
+// 
+// function map_add_booking ($row, &$column, $am7, $pm7, $format)
+// 
+// function draw_cell($cell, $query_strings, $cell_class)
+// 
+// function draw_time_cell($t, $time_t, $time_t_stripped, $hilite_url)
+// 
+// function draw_room_cell($row, $link)
+// 
+// function draw_day_cell($text, $link)
+// 
+
 
 /////////////////////////////////////////
 // Set timezone, if one has been provided
@@ -529,6 +599,7 @@ function make_area_select_html( $link, $current, $year, $month, $day )
 </form>\n";
 
   return $out_html;
+  
 } // end make_area_select_html
 
 function make_room_select_html( $link, $area, $current, $year, $month, $day )
