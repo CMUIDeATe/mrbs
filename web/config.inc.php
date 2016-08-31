@@ -40,8 +40,8 @@ $maxlength['users.user_email']      = 75;  // characters   (email field in users
 /*********************************
  * Site identification information
  *********************************/
-$mrbs_admin = "P. Zach Ali, Technical Director";
-$mrbs_admin_email = "pzali@cmu.edu";
+$mrbs_admin = "IDeATe Reservations";
+$mrbs_admin_email = "help@ideate.cmu.edu";
 
 // The company name is mandatory.   It is used in the header and also for email notifications.
 // The company logo, additional information and URL are all optional.
@@ -49,13 +49,13 @@ $mrbs_admin_email = "pzali@cmu.edu";
 $mrbs_company = "IDeATe";   // This line must always be uncommented ($mrbs_company is used in various places)
 
 // Uncomment this next line to use a logo instead of text for your organisation in the header
-$mrbs_company_logo = "ideateLogo.png";    // name of your logo file.   This example assumes it is in the MRBS directory
+$mrbs_company_logo = "wp-helpers/ideatelogo-sm.png";    // name of your logo file.   This example assumes it is in the MRBS directory
 
 // Uncomment this next line for supplementary information after your company name or logo
-$mrbs_company_more_info = "Resource Reservations";  // e.g. "XYZ Department"
+$mrbs_company_more_info = "IDeATe Resource Reservations";  // e.g. "XYZ Department"
 
 // Uncomment this next line to have a link to your organisation in the header
-$mrbs_company_url = "http://ideate.andrew.cmu.edu/";
+$mrbs_company_url = "https://resources.ideate.cmu.edu/reservations/";
 
 // This is to fix URL problems when using a proxy in the environment.
 // If links inside MRBS appear broken, then specify here the URL of
@@ -64,7 +64,7 @@ $mrbs_company_url = "http://ideate.andrew.cmu.edu/";
 // It is also recommended that you set this if you intend to use email
 // notifications, to ensure that the correct URL is displayed in the
 // notification.
-$url_base = "http://ideate.andrew.cmu.edu/reservations/";
+$url_base = "https://resources.ideate.cmu.edu/reservations/";
 
 
 /*******************
@@ -237,7 +237,7 @@ $weekstarts = 0;
 $hidden_days = array();
 
 // Trailer date format: 0 to show dates as "Jul 10", 1 for "10 Jul"
-$dateformat = 0;
+$dateformat = 1;
 
 // Time format in pages. 0 to show dates in 12 hour format, 1 to show them
 // in 24 hour format
@@ -281,13 +281,13 @@ $row_labels_both_sides = FALSE;
 
 // Define default starting view (month, week or day)
 // Default is day
-$default_view = "day";
+$default_view = "week";
 
 // Define default room to start with (used by index.php)
 // Room numbers can be determined by looking at the Edit or Delete URL for a
 // room on the admin page.
 // Default is 0
-$default_room = 1;
+$default_room = 42;
 
 // Define clipping behaviour for the cells in the day and week views.
 // Set to TRUE if you want the cells in the day and week views to be clipped.   This
@@ -364,7 +364,7 @@ $private_override = "none"; // Override default privacy behavior.
  * Authentication settings - read AUTHENTICATION
  ***********************************************/
 
-$auth["session"] = "php"; // How to get and keep the user ID. One of
+$auth["session"] = "remote_user"; // How to get and keep the user ID. One of
            // "http" "php" "cookie" "ip" "host" "nt" "omni"
            // "remote_user"
 
@@ -406,7 +406,7 @@ $cookie_path_override = '';
 $auth["realm"]  = "mrbs";
 
 // 'session_remote_user' configuration settings
-//$auth['remote_user']['logout_link'] = '/logout/link.html';
+$auth['remote_user']['logout_link'] = 'https://resources.ideate.cmu.edu/Shibboleth.sso/Logout';
 
 // 'auth_ext' configuration settings
 $auth["prog"]   = "";
