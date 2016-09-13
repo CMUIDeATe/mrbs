@@ -633,9 +633,9 @@ require_once "language.inc";
 // be shown in the day view color-key, and not offered in the type selector
 // for new or edited entries.
 
-$typel["A"] = "Physical Computing";
-$typel["B"] = "Integrative Media";
-$typel["C"] = "Experimental Fab";
+$typel["A"] = "Meeting/Training";
+$typel["B"] = "Office Hours";
+$typel["C"] = "Student Use";
 $typel["D"] = "Class";
 $typel["E"] = "Closed";
 // $typel["F"] = "F";
