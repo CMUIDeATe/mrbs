@@ -5,7 +5,7 @@ $mysqli = new mysqli($dbhost_name, $username, $password, $database);
 
 $now = time();
 # Fake times here for testing purposes
-//$now = strtotime("2016-10-19 13:20");
+//$now = strtotime("2016-11-21 13:20");
 
 ?>
 <style>
@@ -134,8 +134,10 @@ function getReservations($room_id, $dates) {
   global $mysqli;
 
   $r = '';
+  $total_listed = 0;
   for ($i = 0; $i < 8; $i++) {
     $result = $mysqli->query("select id,create_by,name,type,room_id,start_time,end_time from mrbs_entry where end_time > ".$dates[$i]." and start_time < ".$dates[$i+1]." and room_id = ".$room_id." order by start_time");
+    $total_listed += $result->num_rows;
     if ($result->num_rows > 0) {
       if ($i > 0) {
         $r .= "<div class=\"date\">&mdash;&nbsp;".date("l <b>j</b> F", $dates[$i])."&nbsp;&mdash;</div>";
@@ -155,6 +157,9 @@ function getReservations($room_id, $dates) {
       $r .= "</ul>";
     }
     $result->free();
+  }
+  if ($total_listed == 0) {
+    $r .= "<div class=\"date\">&mdash;&nbsp;No events scheduled&nbsp;&mdash;</div>";
   }
   return $r;
 }
@@ -455,10 +460,25 @@ function eventTimes($start, $end, $date) {
   # These times should be printed relative to the date they're being printed under.
   $startStr = printTime($start, $date);
   $endStr = printTime($end, $date);
+  $startFar = false;
+  $endFar = false;
 
-  # If there are already spaces, the dash must be extra-clear, and leave a newline.
-  if (strpos($startStr.$endStr, " ")) {
-    return $startStr." &mdash; ".$endStr."<br/>";
+  # If the start time has spaces, it is continued from a previous day.
+  if (strpos($startStr, " ")) {
+    $startStr = "[&raquo;]";
+    $startFar = true;
+  }
+  # If the end time has spaces, it is continued to a subsequent day.
+  if (strpos($endStr, " ")) {
+    $endStr = "[&raquo;]";
+    $endFar = true;
+  }
+
+  if (($startFar || $startStr == "00:00") && ($endFar ||  $endStr == "24:00")) {
+    return "All day";
+  }
+  elseif ($startFar || $endFar) {
+    return $startStr." &mdash; ".$endStr;
   }
   else {
     return $startStr."&ndash;".$endStr;
