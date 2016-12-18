@@ -35,6 +35,8 @@ $now = time();
   #reservations-list li.E .name { color: #b00; font-weight: 600; }
   #reservations-list li.I .name { color: #700; }
 
+  #by-appointment { background: #5f6369; color: #c6c8c7; text-align: center; width: 90%; margin: 3vh 5% 3vh 5%; padding: 1vh 0; font-size: 2.5vh; }
+
   #hours { padding: 1vh; }
   #hours .date { text-transform: uppercase; text-align: right; font-size: 1.6vh; line-height: 1em; color: #5f6369; font-weight: normal; padding: 0.8vh 0.5vh 0 0; }
   #hours table { width: 100%; }
@@ -51,7 +53,7 @@ $now = time();
 <?php
 
 # A default set of instructions that can be overridden.
-$room_instructions = "Reserve online at<br/><b>resources.ideate.cmu.edu/reservations</b>";
+$room_instructions = "For service requests,<br/>email <b>help@ideate.cmu.edu</b>";
 switch (strtoupper($_GET['room'])) {
   case 'A5': # Experimental Fabrication
     $room_id = 42;
@@ -64,11 +66,11 @@ switch (strtoupper($_GET['room'])) {
   case 'A10A': # Media Lab
     $room_id = 56;
     $room_dir = 'left';
+    $room_instructions = "Reserve online at<br/><b>resources.ideate.cmu.edu/reservations</b>";
     break;
   case 'A29': # Lending Booth
     $room_id = 66;
     $room_dir = 'left';
-    $room_instructions = "For service requests,<br/>email <b>help@ideate.cmu.edu</b>";
     break;
   case '106B': # Studio A
     $room_id = 58;
@@ -165,7 +167,7 @@ function getReservations($room_id, $dates) {
 }
 
 function getLendingHours($room_id, $dates) {
-  global $mysqli;
+  global $mysqli, $now;
 
   $r = '';
   # Today
@@ -190,6 +192,21 @@ function getLendingHours($room_id, $dates) {
     $r .= "<li class=\"E\"><span class=\"name\">CLOSED</span></li>";
   }
   $r .= "</ul>";
+  $result->free();
+
+  # Alert about "by appointment" scheduling if necessary
+  $upcoming_types = '';
+  # Next 4 days, starting now.
+  $result = $mysqli->query("select type from mrbs_entry where end_time > ".$now." and start_time < ".$dates[4]." and room_id = ".$room_id." order by start_time");
+  while ($row = $result->fetch_array()) {
+    $upcoming_types .= $row['type'];
+  }
+  # If only E (library closed) and I (other), or if no B (open), the alert is necessary.
+  if (preg_match('/[EI]*E[EI*]$/', $upcoming_types) || !(preg_match('/B/', $upcoming_types))) {
+    $r .= "<div id=\"by-appointment\">";
+    $r .= "Advance appointments can be<br/>scheduled via <b>help@ideate.cmu.edu</b>";
+    $r .= "</div>";
+  }
   $result->free();
 
   # Moving forward
