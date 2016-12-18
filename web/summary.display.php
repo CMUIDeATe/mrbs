@@ -337,10 +337,21 @@ function getLendingStatus($room) {
         $r['tag'] = 'Open';
         break;
       case 'I':
-        # "May be closed".
+        # "May be open", "May be closed", or "Returns only".
         $r['class'] = 'caution';
-        $r['tag'] = 'May Be Closed';
-        $r['extra'] = "Check additional signage for details";
+        switch (strtolower($row['name'])) {
+          case 'may be closed':
+          case 'may be open':
+            $r['tag'] = "May be Open";
+            $r['extra'] = "Check additional signage for details";
+            break;
+          case 'returns only':
+            $r['tag'] = "Open for Returns Only";
+            break;
+          default:
+            $r['tag'] = $row['name'];
+            $r['extra'] = "Check additional signage for details";
+        }
         break;
     }
 
