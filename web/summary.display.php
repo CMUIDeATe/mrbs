@@ -5,7 +5,7 @@ $mysqli = new mysqli($dbhost_name, $username, $password, $database);
 
 $now = time();
 # Fake times here for testing purposes
-//$now = strtotime("2016-11-21 13:20");
+// $now = strtotime("2017-01-18 16:20");
 
 ?>
 <style>
@@ -262,11 +262,19 @@ function getClassroomStatus($room) {
     # If that's in the next 15 minutes, warn folks and tell them when contiguous reservations end.
     if ($row2['start_time'] <= $now + (15*60)) {
       $r['class'] = 'caution';
-      $r['event'] = $row2['name'];
-      $r['tag'] = 'Starting Soon';
-      $r['until'] = "beginning at ".printTime($row2['start_time']);
-      $busy_until = busy_until($room, $row2['start_time']);
-      $r['extra'] = "Room in use through ".printTime($busy_until);
+      if ($row2['type'] == "E") {
+        $r['tag'] = 'Closing Soon';
+        $r['until'] = "at ".printTime($row2['start_time']);
+        $busy_until = busy_until($room, $row2['start_time']);
+        $r['extra'] = "Room reopens ".printTime($busy_until);
+      }
+      else {
+        $r['event'] = $row2['name'];
+        $r['tag'] = 'Starting Soon';
+        $r['until'] = "beginning at ".printTime($row2['start_time']);
+        $busy_until = busy_until($room, $row2['start_time']);
+        $r['extra'] = "Room in use through ".printTime($busy_until);
+      }
     }
     else {
       # Otherwise, the room is going to be available for a while.
