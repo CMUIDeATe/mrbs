@@ -5,7 +5,7 @@ $mysqli = new mysqli($dbhost_name, $username, $password, $database);
 
 $now = time();
 # Fake times here for testing purposes
-// $now = strtotime("2017-01-18 16:20");
+// $now = strtotime("2017-01-17 16:40");
 
 ?>
 <style>
@@ -248,15 +248,16 @@ function getLendingHours($room_id, $dates) {
 function getClassroomStatus($room) {
   global $now, $mysqli;
 
-  # Is there a current reservation?
-  $result = $mysqli->query("select id,create_by,name,type,room_id,start_time,end_time from mrbs_entry where start_time <= ".$now." and end_time > ".$now." and room_id = ".$room." order by end_time desc"); # get the latest end time if overlapping bookings
+  # Is there a current reservation?  Type F (freely available) doesn't count.
+  $result = $mysqli->query("select id,create_by,name,type,room_id,start_time,end_time from mrbs_entry where start_time <= ".$now." and end_time > ".$now." and type != 'F' and room_id = ".$room." order by end_time desc"); # get the latest end time if overlapping bookings
   $status = $result->num_rows;
 
   $r = array();
   if ($status == 0) {
 
     # If there's no reservation, it's available until the next one starts.
-    $result2 = $mysqli->query("select id,create_by,name,type,room_id,start_time,end_time from mrbs_entry where start_time > ".$now." and room_id = ".$room." order by start_time limit 1");
+    # Type F (freely available) doesn't count as busy.  
+    $result2 = $mysqli->query("select id,create_by,name,type,room_id,start_time,end_time from mrbs_entry where start_time > ".$now." and type != 'F' and room_id = ".$room." order by start_time limit 1");
     $row2 = $result2->fetch_array();
 
     # If that's in the next 15 minutes, warn folks and tell them when contiguous reservations end.
@@ -451,7 +452,8 @@ function busy_until($room, $start_time) {
   $busy_until = $start_time;
   $num_results = 1;
   while ($num_results > 0) {
-    $result = $mysqli->query("select id,create_by,name,type,room_id,start_time,end_time from mrbs_entry where start_time <= ".$busy_until." and end_time > ".$busy_until." and room_id = ".$room." order by end_time desc limit 1"); # get latest end time possible
+    # If we come to type F (freely available), it doesn't count as busy.
+    $result = $mysqli->query("select id,create_by,name,type,room_id,start_time,end_time from mrbs_entry where start_time <= ".$busy_until." and end_time > ".$busy_until." and type != 'F' and room_id = ".$room." order by end_time desc limit 1"); # get latest end time possible
     $num_results = $result->num_rows;
     if ($num_results > 0) {
       $row = $result->fetch_array();
