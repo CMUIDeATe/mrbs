@@ -5,8 +5,9 @@
 /**************************************************************************
  *   MRBS Configuration File
  *   Configure this file for your site.
- *   You shouldn't have to modify anything outside this file.
  **************************************************************************/
+
+require "config/secrets.php";
 
 // The timezone your meeting rooms run in. It is especially important
 // to set this if you're using PHP 5 on Linux. In this configuration
@@ -22,23 +23,7 @@
 /*******************
  * Database settings
  ******************/
-// Which database system: "pgsql"=PostgreSQL, "mysql"=MySQL,
-// "mysqli"=MySQL via the mysqli PHP extension
-$dbsys = "mysql";
-// Hostname of database server. For pgsql, can use "" instead of localhost
-// to use Unix Domain Sockets instead of TCP/IP.
-$db_host = "localhost";
-// Database name:
-$db_database = "mrbs";
-// Database login user name:
-$db_login = "mrbs";
-// Database login password:
-$db_password = 'mrbs-password';
-// Prefix for table names.  This will allow multiple installations where only
-// one database is available
-$db_tbl_prefix = "mrbs_";
-// Uncomment this to NOT use PHP persistent (pooled) database connections:
-// $db_nopersist = 1;
+// XXX: Connection information is in config/secrets.php
 
 // Field lengths in the database tables
 // NOTE:  these must be kept in step with the database.   If you change the field
@@ -386,9 +371,8 @@ $auth["type"] = "config"; // How to validate the user/password. One of "none"
 
 // Configuration parameters for 'cookie' session scheme
 
-// The encryption secret key for the session tokens. You are strongly
-// advised to change this if you use this session scheme
-$auth["session_cookie"]["secret"] = "This isn't a very good secret!";
+// XXX: The encryption secret key for the session tokens is in config/secrets.php
+
 // The expiry time of a session, in seconds
 $auth["session_cookie"]["session_expire_time"] = (60*60*24*30); // 30 days
 // Whether to include the user's IP address in their session cookie.
@@ -411,27 +395,9 @@ $auth["session_php"]["session_expire_time"] = (60*60*24*30); // 30 days
 // of automatically determining the cookie path to use
 $cookie_path_override = '';
 
-// The list of administrators (can modify other peoples settings).
-//
-// This list is not needed when using the 'db' authentication scheme EXCEPT
-// when upgrading from a pre-MRBS 1.4.2 system that used db authentication.
-// Pre-1.4.2 the 'db' authentication scheme did need this list.   When running
-// edit_users.php for the first time in a 1.4.2 system or later, with an existing
-// users list in the database, the system will automatically add a field to
-// the table for access rights and give admin rights to those users in the database
-// for whom admin rights are defined here.   After that this list is ignored.
-$auth["admin"][] = "127.0.0.1";     // localhost IP address. Useful with IP sessions.
-$auth["admin"][] = "administrator"; // A user name from the user list. Useful 
-                                    // with most other session schemes.
-//$auth["admin"][] = "10.0.0.1";
-//$auth["admin"][] = "10.0.0.2";
-//$auth["admin"][] = "10.0.0.3";
+// XXX: The list of administrators (can modify other peoples settings) is in config/secrets.php
 
-// 'auth_config' user database
-// Format: $auth["user"]["name"] = "password";
-$auth["user"]["administrator"] = "secret";
-$auth["user"]["alice"] = "a";
-$auth["user"]["bob"] = "b";
+// XXX: 'auth_config' user database is in config/secrets.php
 
 // 'session_http' configuration settings
 $auth["realm"]  = "mrbs";
@@ -443,28 +409,7 @@ $auth["realm"]  = "mrbs";
 $auth["prog"]   = "";
 $auth["params"] = "";
 
-// 'auth_db' configuration settings
-// The highest level of access (0=none; 1=user; 2+=admin).    Used in edit_users.php
-// In the future we might want a higher level of granularity, eg to distinguish between
-// different levels of admin
-$max_level = 2;
-// The lowest level of admin allowed to edit other users
-$min_user_editing_level = 2;
-
-// 'auth_db_ext' configuration settings
-// The 'db_system' variable is equivalent to the core MRBS $dbsys variable,
-// and allows you to use any of MRBS's database abstraction layers for
-// db_ext authentication.
-$auth['db_ext']['db_system'] = 'mysql';
-$auth['db_ext']['db_host'] = 'localhost';
-$auth['db_ext']['db_username'] = 'authuser';
-$auth['db_ext']['db_password'] = 'authpass';
-$auth['db_ext']['db_name'] = 'authdb';
-$auth['db_ext']['db_table'] = 'users';
-$auth['db_ext']['column_name_username'] = 'name';
-$auth['db_ext']['column_name_password'] = 'password';
-// Either 'md5', 'sha1', 'crypt' or 'plaintext'
-$auth['db_ext']['password_format'] = 'md5';
+// XXX: 'auth_db' configuration settings are in config/secrets.php
 
 // 'auth_ldap' configuration settings
 // Where is the LDAP server
@@ -610,11 +555,7 @@ define ("SMTP_PORT", 25);
 // Set whether or not to use SMTP authentication. Default is 'FALSE'
 define ("SMTP_AUTH", FALSE);
 
-// Set the username to use for SMTP authentication. Default is ""
-define ("SMTP_USERNAME", '');
-
-// Set the password to use for SMTP authentication. Default is ""
-define ("SMTP_PASSWORD", '');
+// XXX: SMTP credentials are in config/secrets.php
 
 /**********************
  * Miscellaneous settings

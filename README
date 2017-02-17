@@ -79,3 +79,10 @@ Many other reports of successful use have been seen on the MRBS mailing list,
 and your report would be welcome there too. Let us know who is using MRBS!
 
 $Id: README 798 2008-04-13 19:59:24Z jberanek $
+
+
+------------------------------------------------
+Local modifications and deployment instructions:
+------------------------------------------------
+Replace web/config/secrets.example.php and web/config.example.php with
+web/config/secrets.php and web/config.php, and fill in the proper credentials.
