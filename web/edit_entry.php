@@ -741,7 +741,7 @@ else
       </div>
     </div>
     <div id="div_type">
-	  <label for=<?php echo (getAuthorised(2) ? "\"type\"" : "\"typedisplay\""); ?>><?php echo get_vocab("type")?>:</label>
+	  <label for="type"><?php echo get_vocab("type")?>:</label>
      <div class="group">    
 	<?php
 	if(getAuthorised(2))
@@ -758,8 +758,11 @@ else
 	  }
 	else
 	  {
-	    echo "      <input id=\"typedisplay\" name=\"typedisplay\" readonly=\"readonly\" value=\"" . $typel[$type] . "\"></input>";
-	    echo "      <input id=\"type\" name=\"type\" type=\"hidden\" value=\"$type\"></input>";
+	    // Unprivileged users can select their affiliation type or "Freely Available" (type F)
+	    echo "      <select id=\"type\" name=\"type\" onchange=\"changeEventName(this.form)\">";
+	      echo "        <option value=\"$type\" selected=\"selected\">".$typel[$type]."</option>\n";
+	      echo "        <option value=\"F\">".$typel['F']."</option>\n";
+	    echo "      </select>";
 	  }
 ?>
       <?php 
@@ -781,6 +784,38 @@ else
       } ?>
      </div>
     </div>
+
+    <?php
+    // Modify title of event when unprivileged users select "Freely Available" (type F)
+    if(!getAuthorised(2))
+      {
+    ?>
+      <script type="text/javascript">
+      //<![CDATA[
+      
+      function changeEventName( formObj )
+      {
+        typesObj = eval( "formObj.type" );
+
+        type = typesObj[typesObj.selectedIndex].value;
+        nameObj = eval( "formObj.elements['name']" );
+
+        // update name based on type selected
+        andrewid = '<?php echo htmlspecialchars($name); ?>';
+        switch (type){
+          case 'F':
+            nameObj['value'] = "Open reservation (" + andrewid + ")";
+            break;
+          default:
+            nameObj['value'] = andrewid;
+        }
+      }
+
+      //]]>
+      </script>
+    <?php
+      }
+    ?>
 
   <?php
   if(getAuthorised(2))
