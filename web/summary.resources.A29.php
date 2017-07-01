@@ -21,7 +21,8 @@ $now = time();
   #reservations-list li.B .name { color: #740; }
   #reservations-list li.C .name { color: #333; }
   #reservations-list li.D .name { color: #042; }
-  #reservations-list li.E .name { color: #b00; font-weight: 600; }
+  #reservations-list li.E { font-size: 0.75em !important; font-style: italic; color: #999; padding-top: 0.1em; padding-bottom: 0.1em; }
+  #reservations-list li.E-closed .name { color: #b00; font-weight: 600; }
   #reservations-list li.I .name { color: #700; }
 
   #hours { padding: 1em; }
@@ -81,7 +82,7 @@ function getLendingHours($room_id, $dates) {
     }
   }
   else {
-    $r .= "<li class=\"E\"><span class=\"name\">CLOSED</span></li>";
+    $r .= "<li class=\"E-closed\"><span class=\"name\">CLOSED</span></li>";
   }
   $r .= "</ul>";
   $result->free();
@@ -110,7 +111,7 @@ function getLendingHours($room_id, $dates) {
       }
     }
     else {
-      $r .= "<li class=\"E\"><span class=\"name\">CLOSED</span></li>";
+      $r .= "<li class=\"E-closed\"><span class=\"name\">CLOSED</span></li>";
     }
     $r .= "</ul>";
     $r .= "</td>";
