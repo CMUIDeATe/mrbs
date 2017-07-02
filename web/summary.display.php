@@ -146,9 +146,7 @@ function getReservations($room_id, $dates) {
         $r .= "<div class=\"date\">&mdash;&nbsp;".date("l <b>j</b> F", $dates[$i])."&nbsp;&mdash;</div>";
       }
       $r .= "<ul id=\"reservations-list\">";
-      while ($row = $result->fetch_array()) {
-        $r .= printEvent($row, $dates[$i]);
-      }
+      $r .= printReservationsList($result, $dates[$i], $dates[$i+1]);
       $r .= "</ul>";
     }
     $result->free();
@@ -169,9 +167,8 @@ function getLendingHours($room_id, $dates) {
   $result = $mysqli->query("select id,create_by,name,type,room_id,start_time,end_time from mrbs_entry where end_time > ".$dates[0]." and start_time < ".$dates[1]." and room_id = ".$room_id." order by start_time");
   $r .= "<ul id=\"reservations-list\" class=\"today\">";
   if ($result->num_rows > 0) {
-    while ($row = $result->fetch_array()) {
-      $r .= printEvent($row, $dates[0]);
-    }
+    # TODO: Also print "CLOSED" if lending is closed even if library is not.
+    $r .= printReservationsList($result, $dates[0], $dates[1]);
   }
   else {
     $r .= "<li class=\"E-closed\"><span class=\"name\">CLOSED</span></li>";
@@ -205,9 +202,8 @@ function getLendingHours($room_id, $dates) {
     $result = $mysqli->query("select id,create_by,name,type,room_id,start_time,end_time from mrbs_entry where end_time > ".$dates[$i]." and start_time < ".$dates[$i+1]." and room_id = ".$room_id." order by start_time");
     $r .= "<ul id=\"reservations-list\">";
     if ($result->num_rows > 0) {
-      while ($row = $result->fetch_array()) {
-        $r .= printEvent($row, $dates[$i]);
-      }
+      # TODO: Also print "CLOSED" if lending is closed even if library is not.
+      $r .= printReservationsList($result, $dates[$i], $dates[$i+1]);
     }
     else {
       $r .= "<li class=\"E-closed\"><span class=\"name\">CLOSED</span></li>";
@@ -439,6 +435,33 @@ function busy_until($room, $start_time) {
     $result->free();
   }
   return $busy_until;
+}
+
+function printReservationsList($result, $periodStart, $periodEnd) {
+  $r = '';
+  while ($row = $result->fetch_array()) {
+    if ($row['type'] != 'E') {
+      # Display a normal event.
+      $r .= printEvent($row, $periodStart);
+    }
+    else {
+      # Say something about library closures (type 'E').
+      # TODO: These could be coalesced even further when there are no other events.
+      $r .= "<li class=\"E\">";
+      if ($row['start_time'] > $periodStart) {
+        $r .= "Hunt Library closes at <b>".printTime($row['start_time'], $periodStart)."</b>";
+      }
+      if ($row['end_time'] < $periodEnd) {
+        $r .= "Hunt Library opens at <b>".printTime($row['end_time'], $periodStart)."</b>";
+      }
+      if ($row['start_time'] < $periodStart && $row['end_time'] > $periodEnd) {
+        $r .= "Hunt Library is <b>closed</b>";
+      }
+      $r .= "</li>";
+    }
+  }
+
+  return $r;
 }
 
 function printEvent($event, $rel) {
