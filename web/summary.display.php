@@ -147,15 +147,7 @@ function getReservations($room_id, $dates) {
       }
       $r .= "<ul id=\"reservations-list\">";
       while ($row = $result->fetch_array()) {
-        $r .= "<li class=\"".$row['type']."\">";
-          $r .= "<span class=\"time\">";
-          $r .= eventTimes($row['start_time'], $row['end_time'], $dates[$i]);
-          $r .= "</span>";
-          $r .= " ";
-          $r .= "<span class=\"name\">";
-          $r .= $row['name'];
-          $r .= "</span>";
-        $r .= "</li>";
+        $r .= printEvent($row, $dates[$i]);
       }
       $r .= "</ul>";
     }
@@ -178,15 +170,7 @@ function getLendingHours($room_id, $dates) {
   $r .= "<ul id=\"reservations-list\" class=\"today\">";
   if ($result->num_rows > 0) {
     while ($row = $result->fetch_array()) {
-      $r .= "<li class=\"".$row['type']."\">";
-        $r .= "<span class=\"time\">";
-        $r .= eventTimes($row['start_time'], $row['end_time'], $dates[0]);
-        $r .= "</span>";
-        $r .= " ";
-        $r .= "<span class=\"name\">";
-        $r .= $row['name'];
-        $r .= "</span>";
-      $r .= "</li>";
+      $r .= printEvent($row, $dates[0]);
     }
   }
   else {
@@ -222,15 +206,7 @@ function getLendingHours($room_id, $dates) {
     $r .= "<ul id=\"reservations-list\">";
     if ($result->num_rows > 0) {
       while ($row = $result->fetch_array()) {
-        $r .= "<li class=\"".$row['type']."\">";
-          $r .= "<span class=\"time\">";
-          $r .= eventTimes($row['start_time'], $row['end_time'], $dates[$i]);
-          $r .= "</span>";
-          $r .= " ";
-          $r .= "<span class=\"name\">";
-          $r .= $row['name'];
-          $r .= "</span>";
-        $r .= "</li>";
+        $r .= printEvent($row, $dates[$i]);
       }
     }
     else {
@@ -463,6 +439,20 @@ function busy_until($room, $start_time) {
     $result->free();
   }
   return $busy_until;
+}
+
+function printEvent($event, $rel) {
+  $r = "<li class=\"".$event['type']."\">";
+    $r .= "<span class=\"time\">";
+    $r .= eventTimes($event['start_time'], $event['end_time'], $rel);
+    $r .= "</span>";
+    $r .= " ";
+    $r .= "<span class=\"name\">";
+    $r .= $event['name'];
+    $r .= "</span>";
+  $r .= "</li>";
+
+  return $r;
 }
 
 function printTime($time, $rel=-1) {
