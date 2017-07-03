@@ -177,19 +177,35 @@ function getLendingHours($room_id, $dates) {
   $result->free();
 
   # Alert about "by appointment" scheduling if necessary
-  $upcoming_types = '';
-  # Next 4 days, starting now.
-  $result = $mysqli->query("select type from mrbs_entry where end_time > ".$now." and start_time < ".$dates[4]." and room_id = ".$room_id." order by start_time");
-  while ($row = $result->fetch_array()) {
-    $upcoming_types .= $row['type'];
+  $alert_appointments = false;
+  # Friday of spring exams (Friday between 6 and 12 May)
+  $summer_starts = strtotime("5 May ".date("Y",$now)." next Friday");
+  # Saturday before fall classes (Saturday between 23 and 29 August)
+  $summer_ends = strtotime("22 August ".date("Y",$now)." next Saturday");
+
+  if ($now >= $summer_starts && $now < $summer_ends && getLendingStatus($room_id)['class'] == 'reserved') {
+    $alert_appointments = true;
   }
-  # If only E (library closed) and I (other), or if no B (open), the alert is necessary.
-  if (preg_match('/[EI]*E[EI*]$/', $upcoming_types) || !(preg_match('/B/', $upcoming_types))) {
+  else {
+    # This heuristic which checks the next 4 days, starting now, works well for
+    # holidays during the academic year.
+    $upcoming_types = '';
+    $result = $mysqli->query("select type from mrbs_entry where end_time > ".$now." and start_time < ".$dates[4]." and room_id = ".$room_id." order by start_time");
+    while ($row = $result->fetch_array()) {
+      $upcoming_types .= $row['type'];
+    }
+    # If only E (library closed) and I (other), or if no B (open), the alert is necessary.
+    if (preg_match('/[EI]*E[EI*]$/', $upcoming_types) || !(preg_match('/B/', $upcoming_types))) {
+      $alert_appointments = true;
+    }
+    $result->free();
+  }
+
+  if ($alert_appointments) {
     $r .= "<div id=\"by-appointment\">";
     $r .= "Advance appointments can be<br/>scheduled via <b>help@ideate.cmu.edu</b>";
     $r .= "</div>";
   }
-  $result->free();
 
   # Moving forward
   //$r .= "<div class=\"heading\">&mdash;&nbsp;The Week Ahead&nbsp;&mdash;</div>";
