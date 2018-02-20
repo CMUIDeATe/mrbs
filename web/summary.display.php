@@ -69,9 +69,14 @@ switch (strtoupper($_GET['room'])) {
     $room_dir = 'left';
     $room_instructions = "Reserve online at<br/><b>resources.ideate.cmu.edu/reservations</b>";
     break;
-  case 'A29': # Lending Booth
+  case 'A29': # Lending Desk
     $room_id = 66;
     $room_dir = 'left';
+    break;
+  case 'A30': # Wood Shop
+    $room_id = 43;
+    $room_dir = 'right';
+    $room_instructions = "Shop hours are for IDeATe students only, except during <strong>Open Fabrication Hours.</strong>";
     break;
   case '106B': # Studio A
     $room_id = 58;
@@ -91,8 +96,8 @@ for ($i = 0; $i <= 8; $i++) {
 }
 
 
-# Most of the rooms behave the same, but A29 (room 66) is completely different.
-if ($room_id != 66) {
+# Most of the rooms behave the same, but A29/A30 (rooms 66/43) are completely different.
+if ($room_id != 66 && $room_id != 43) {
   # THE COMMON CASE: CLASSROOM SPACES
   
   # Current room status
@@ -108,7 +113,7 @@ if ($room_id != 66) {
   echo "</div>";
 }
 else {
-  # THE EXCEPTIONAL CASE: LENDING BOOTH
+  # THE EXCEPTIONAL CASE: LENDING DESK / WOOD SHOP
 
   # Current room status
   $status = getLendingStatus($room_id);
