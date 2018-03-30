@@ -468,17 +468,15 @@ function printReservationsList($result, $periodStart, $periodEnd) {
     else {
       # Say something about library closures (type 'E').
       # TODO: These could be coalesced even further when there are no other events.
-      $r .= "<li class=\"E\">";
       if ($row['start_time'] > $periodStart) {
-        $r .= "Hunt Library closes at <b>".printTime($row['start_time'], $periodStart)."</b>";
+        $r .= "<li class=\"E\">Hunt Library closes at <b>".printTime($row['start_time'], $periodStart)."</b></li>";
       }
       if ($row['end_time'] < $periodEnd) {
-        $r .= "Hunt Library opens at <b>".printTime($row['end_time'], $periodStart)."</b>";
+        $r .= "<li class=\"E\">Hunt Library opens at <b>".printTime($row['end_time'], $periodStart)."</b></li>";
       }
       if ($row['start_time'] < $periodStart && $row['end_time'] > $periodEnd) {
-        $r .= "Hunt Library is <b>closed</b>";
+        $r .= "<li class=\"E\">Hunt Library is <b>closed</b></li>";
       }
-      $r .= "</li>";
     }
   }
 
