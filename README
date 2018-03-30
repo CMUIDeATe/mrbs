@@ -86,3 +86,7 @@ Local modifications and deployment instructions:
 ------------------------------------------------
 Replace web/config/secrets.example.php and web/config.example.php with
 web/config/secrets.php and web/config.php, and fill in the proper credentials.
+
+Work in a non-production repository or copy hotfixes to one before committing.
+To deploy to production, enter the production directory, `sudo su deploy` and
+`git pull origin master`.
