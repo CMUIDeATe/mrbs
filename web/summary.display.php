@@ -8,6 +8,7 @@ $now = time();
 // $now = strtotime("2017-01-17 16:40");
 
 ?>
+<meta http-equiv="refresh" content="60" />
 <style>
   @import 'https://fonts.googleapis.com/css?family=Open+Sans:400,600,700&subset=latin-ext';
 
