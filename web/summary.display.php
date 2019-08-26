@@ -276,7 +276,9 @@ function getClassroomStatus($room) {
       # Otherwise, the room is going to be available for a while.
       $r['class'] = 'available';
       $r['tag'] = 'Available';
-      $r['until'] = "until ".printTime($row2['start_time']);
+      if (!is_null($busy_until)) {
+        $r['until'] = "until ".printTime($row2['start_time']);
+      }
     }
     $result2->free();
 
@@ -395,7 +397,9 @@ function getLendingStatus($room) {
     $result2 = $mysqli->query("select id,create_by,name,type,room_id,start_time,end_time from mrbs_entry where start_time > ".$now." and type != 'E' and room_id = ".$room." order by start_time limit 1");
     $row2 = $result2->fetch_array();
 
-    $r['until'] = "Opening at ".printTime($row2['start_time']);
+    if (!is_null($row2['start_time'])) {
+      $r['until'] = "Opening at ".printTime($row2['start_time']);
+    }
     $result2->free();
 
   }
@@ -506,7 +510,7 @@ function printTime($time, $rel=-1) {
 
   # If null, make it known that this is unknown.
   if ($time == 0) {
-    return "???";
+    return NULL;
   }
 
   # For exactly midnight tomorrow, use "24:00" instead as though it were part of today.
