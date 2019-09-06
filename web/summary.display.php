@@ -276,7 +276,7 @@ function getClassroomStatus($room) {
       # Otherwise, the room is going to be available for a while.
       $r['class'] = 'available';
       $r['tag'] = 'Available';
-      if (!is_null($busy_until)) {
+      if (!is_null($row2['start_time'])) {
         $r['until'] = "until ".printTime($row2['start_time']);
       }
     }
