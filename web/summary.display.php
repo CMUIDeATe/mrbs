@@ -145,7 +145,7 @@ function getReservations($room_id, $dates) {
   $r = '';
   $total_listed = 0;
   for ($i = 0; $i < 8; $i++) {
-    $result = $mysqli->query("select id,create_by,name,type,room_id,start_time,end_time from mrbs_entry where end_time > ".$dates[$i]." and start_time < ".$dates[$i+1]." and room_id = ".$room_id." order by start_time");
+    $result = $mysqli->query("select id,create_by,name,type,room_id,start_time,end_time from mrbs_entry where end_time > ".$dates[$i]." and start_time <= ".$dates[$i+1]." and room_id = ".$room_id." order by start_time");
     $total_listed += $result->num_rows;
     if ($result->num_rows > 0) {
       if ($i > 0) {
@@ -170,7 +170,7 @@ function getLendingHours($room_id, $dates) {
   # Today
   $r .= "<div class=\"heading\">&mdash;&nbsp;Today&rsquo;s Hours&nbsp;&mdash;</div>";
 
-  $result = $mysqli->query("select id,create_by,name,type,room_id,start_time,end_time from mrbs_entry where end_time > ".$dates[0]." and start_time < ".$dates[1]." and room_id = ".$room_id." order by start_time");
+  $result = $mysqli->query("select id,create_by,name,type,room_id,start_time,end_time from mrbs_entry where end_time > ".$dates[0]." and start_time <= ".$dates[1]." and room_id = ".$room_id." order by start_time");
   $r .= "<ul id=\"reservations-list\" class=\"today\">";
   if ($result->num_rows > 0) {
     # TODO: Also print "CLOSED" if lending is closed even if library is not.
@@ -221,7 +221,7 @@ function getLendingHours($room_id, $dates) {
     $r .= "<tr>";
     $r .= "<th valign=\"top\" class=\"date\">".date("<b>D</b><\\b\\r>j M", $dates[$i])."</th>";
     $r .= "<td valign=\"top\">";
-    $result = $mysqli->query("select id,create_by,name,type,room_id,start_time,end_time from mrbs_entry where end_time > ".$dates[$i]." and start_time < ".$dates[$i+1]." and room_id = ".$room_id." order by start_time");
+    $result = $mysqli->query("select id,create_by,name,type,room_id,start_time,end_time from mrbs_entry where end_time > ".$dates[$i]." and start_time <= ".$dates[$i+1]." and room_id = ".$room_id." order by start_time");
     $r .= "<ul id=\"reservations-list\">";
     if ($result->num_rows > 0) {
       # TODO: Also print "CLOSED" if lending is closed even if library is not.
@@ -467,8 +467,11 @@ function printReservationsList($result, $periodStart, $periodEnd) {
   $r = '';
   while ($row = $result->fetch_array()) {
     if ($row['type'] != 'E') {
-      # Display a normal event.
-      $r .= printEvent($row, $periodStart);
+      # Display a normal event, so long as it doesn't start at exactly 24:00
+      # (in which case it is displayed the next day).
+      if ($row['start_time'] < $periodEnd) {
+        $r .= printEvent($row, $periodStart);
+      }
     }
     else {
       # Say something about library closures (type 'E').
@@ -476,7 +479,7 @@ function printReservationsList($result, $periodStart, $periodEnd) {
       if ($row['start_time'] > $periodStart) {
         $r .= "<li class=\"E\">Hunt Library closes at <b>".printTime($row['start_time'], $periodStart)."</b></li>";
       }
-      if ($row['end_time'] < $periodEnd) {
+      if ($row['end_time'] <= $periodEnd) {
         $r .= "<li class=\"E\">Hunt Library opens at <b>".printTime($row['end_time'], $periodStart)."</b></li>";
       }
       if ($row['start_time'] < $periodStart && $row['end_time'] > $periodEnd) {
