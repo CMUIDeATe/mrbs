@@ -402,7 +402,7 @@ if(!getAuthorised(2))
 ?>
 	<h1><?php echo get_vocab('invalid_booking'); ?></h1>
 	<p>
-	  <?php echo "You do not have permission to reserve this equipment."; ?>
+	  <?php echo "You do not have permission to reserve this resource."; ?>
         </p>
 
 <?php
@@ -466,7 +466,7 @@ if(!getAuthorised(2))
 ?>
 	<h1><?php echo get_vocab('invalid_booking'); ?></h1>
 	<p>
-	  <?php echo "This equipment can only reserved for $hrsallowed hours per day. You already have $hrsused hour(s) reserved; the additional $reshrs hour(s) would put you over the limit."; ?>
+	  <?php echo "This resource can only reserved for $hrsallowed hours per day. You already have $hrsused hour(s) reserved; the additional $reshrs hour(s) would put you over the limit."; ?>
         </p>
 
 <?php
