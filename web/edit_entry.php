@@ -490,13 +490,17 @@ else
 
     <div id="div_name">
       
-	  <label for="name"><?php echo get_vocab("namebooker")?>:</label>
-	  
       <?php
-	if (getAuthorised(2)) $namereadonly="";
-	else $namereadonly="readonly=\"readonly\"";
-      echo "<input id=\"name\" name=\"name\"" . $namereadonly . " maxlength=\"" . $maxlength['entry.name'] 
-																						. "\" value=\"" . htmlspecialchars($name) . "\">\n";
+	if (getAuthorised(2))
+	{
+	  echo "<label for=\"name\">".get_vocab("brief_description").":</label>";
+	  echo "<input id=\"name\" name=\"name\" maxlength=\"" . $maxlength['entry.name'] . "\" value=\"" . htmlspecialchars($name) . "\">\n";
+	}
+	else
+	{
+	  echo "<label for=\"name\">".get_vocab("namebooker").":</label>";
+	  echo "<input id=\"name\" name=\"name\" readonly=\"readonly\" maxlength=\"" . $maxlength['entry.name'] . "\" value=\"" . htmlspecialchars($name) . "\">\n";
+	}
       ?>
 	  
     </div>
