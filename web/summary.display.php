@@ -482,7 +482,7 @@ function printReservationsList($result, $periodStart, $periodEnd) {
       if ($row['end_time'] <= $periodEnd) {
         $r .= "<li class=\"E\">Hunt Library opens at <b>".printTime($row['end_time'], $periodStart)."</b></li>";
       }
-      if ($row['start_time'] < $periodStart && $row['end_time'] > $periodEnd) {
+      if ($row['start_time'] <= $periodStart && $row['end_time'] >= $periodEnd) {
         $r .= "<li class=\"E\">Hunt Library is <b>closed</b></li>";
       }
     }
