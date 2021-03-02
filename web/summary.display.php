@@ -425,7 +425,9 @@ function printStatus($status, $room_dir) {
       if (isset($status['event'])) {
         $r .= "<div id=\"event\">".$status['event']."</div>";
       }
-      $r .= "<div id=\"until\">".$status['until']."</div>";
+      if (isset($status['until'])) {
+        $r .= "<div id=\"until\">".$status['until']."</div>";
+      }
       if (isset($status['extra'])) {
         $r .= "<div id=\"extra\">".$status['extra']."</div>";
       }
