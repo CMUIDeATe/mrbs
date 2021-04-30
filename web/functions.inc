@@ -744,6 +744,9 @@ function map_add_booking ($row, &$column, $am7, $pm7, $format)
   //                     [data]
   //                     [long_descr]
   //                     [start_time]
+  //                     [end_time]
+  //                     [start_timestamp]
+  //                     [end_timestamp]
   //                     [slots]
   
   // slots records the duration of the booking in number of time slots.
@@ -807,11 +810,15 @@ function map_add_booking ($row, &$column, $am7, $pm7, $format)
       $n++;
     }
     
-    // fill in the id, type and start time
+    // fill in the id, type, start and end time
+    // keep the original timestamps around as well
     $column[$time_t][$n]["id"] = $row['entry_id'];
     $column[$time_t][$n]["is_private"] = $is_private;
     $column[$time_t][$n]["color"] = $row['type'];
     $column[$time_t][$n]["start_time"] = utf8_strftime(hour_min_format(), $row['start_time']);
+    $column[$time_t][$n]["end_time"] = utf8_strftime(hour_min_format(), $row['end_time']);
+    $column[$time_t][$n]["start_timestamp"] = $row['start_time'];
+    $column[$time_t][$n]["end_timestamp"] = $row['end_time'];
     $column[$time_t][$n]["slots"] = null;  // to avoid undefined index NOTICE errors
     // if it's a multiple booking also fill in the name and description
     if ($n > 0)
@@ -931,7 +938,7 @@ function map_add_booking ($row, &$column, $am7, $pm7, $format)
 
 
 
-function draw_cell($cell, $query_strings, $cell_class)
+function draw_cell($cell, $query_strings, $cell_class, $midnight, $midnight_tonight)
 {
   // draws a single cell in the main table of the day and week views
   //
@@ -944,6 +951,9 @@ function draw_cell($cell, $query_strings, $cell_class)
   //         [data]
   //         [long_descr]
   //         [start_time]
+  //         [end_time]
+  //         [start_timestamp]
+  //         [end_timestamp]
   //         [slots]
   //
   // where n is the number of the booking in the cell.    There can be none, one or many 
@@ -1085,6 +1095,10 @@ function draw_cell($cell, $query_strings, $cell_class)
       $descr      = htmlspecialchars($cell[0]["data"]);
       $long_descr = htmlspecialchars($cell[0]["long_descr"]);
       $slots      = $cell[0]["slots"];
+      $start_time = $cell[0]["start_time"];
+      $end_time   = $cell[0]["end_time"];
+      $start_timestamp = $cell[0]["start_timestamp"];
+      $end_timestamp   = $cell[0]["end_timestamp"];
     }
     else  // id not set
     {
@@ -1165,6 +1179,9 @@ function draw_cell($cell, $query_strings, $cell_class)
         {
           echo "<div class=\"celldiv slots" . $slots . "\">\n";     // we want clipping of overflow
         } 
+        echo "  <div style=\"font-size: 70%; padding: 2px 2px 0 2px;\">";
+        echo start_and_end_timestamp($start_timestamp, $end_timestamp, $midnight, $midnight_tonight);
+        echo  "</div>\n";
         echo "  <a href=\"view_entry.php?id=$id&amp;". $query_strings['booking'] . "\" title=\"$long_descr\">$descr</a>\n";
         echo "</div>\n";
       }
@@ -1223,6 +1240,102 @@ function draw_day_cell($text, $link)
   echo "<div class=\"celldiv slots1\">\n";
   echo "<a href=\"$link\" title=\"" . get_vocab("viewday") . "\">$text</a>\n";
   echo "</div></td>\n";
+}
+
+// 3-value compare: Returns result of compare as "< " "= " or "> ".
+function cmp3($a, $b)
+{
+  if ($a < $b)
+  {
+    return "< ";
+  }
+  if ($a == $b)
+  {
+    return "= ";
+  }
+  return "> ";
+}
+
+function start_and_end_timestamp($start_timestamp, $end_timestamp, $midnight, $midnight_tonight)
+{
+  global $enable_periods, $periods;
+
+  // Used below: localized "all day" text but with non-breaking spaces:
+  //$all_day = preg_replace(" ", "&nbsp;", get_vocab("all_day"));
+  $all_day = htmlentities(get_vocab("all_day"));
+
+  // Describe the start and end time, accounting for "all day"
+  // and for entries starting before/ending after today.
+  // There are 9 cases, for start time < = or > midnight this morning,
+  // and end time < = or > midnight tonight.
+  // Use ~ (not -) to separate the start and stop times, because MSIE
+  // will incorrectly line break after a -.
+
+  if (empty( $enable_periods ) )
+  {
+    switch (cmp3($start_timestamp, $midnight) . cmp3($end_timestamp, $midnight_tonight + 1))
+    {
+      case "> < ":         // Starts after midnight, ends before midnight
+      case "= < ":         // Starts at midnight, ends before midnight
+        return htmlspecialchars(utf8_strftime(hour_min_format(), $start_timestamp)) . "~" . htmlspecialchars(utf8_strftime(hour_min_format(), $end_timestamp));
+        break;
+      case "> = ":         // Starts after midnight, ends at midnight
+        return htmlspecialchars(utf8_strftime(hour_min_format(), $start_timestamp)) . "~24:00";
+        break;
+      case "> > ":         // Starts after midnight, continues tomorrow
+        return htmlspecialchars(utf8_strftime(hour_min_format(), $start_timestamp)) . "~====&gt;";
+        break;
+      case "= = ":         // Starts at midnight, ends at midnight
+        return $all_day;
+        break;
+      case "= > ":         // Starts at midnight, continues tomorrow
+        return $all_day . "====&gt;";
+        break;
+      case "< < ":         // Starts before today, ends before midnight
+        return "&lt;====~" . htmlspecialchars(utf8_strftime(hour_min_format(), $end_timestamp));
+        break;
+      case "< = ":         // Starts before today, ends at midnight
+        return "&lt;====" . $all_day;
+        break;
+      case "< > ":         // Starts before today, continues tomorrow
+        return "&lt;====" . $all_day . "====&gt;";
+        break;
+    }
+  }
+  else
+  {
+    $start_str = period_timestamp_string($start_timestamp);
+    $end_str   = period_timestamp_string($end_timestamp, -1);
+    switch (cmp3($start_timestamp, $midnight) . cmp3($end_timestamp, $midnight_tonight + 1))
+    {
+      case "> < ":         // Starts after midnight, ends before midnight
+      case "= < ":         // Starts at midnight, ends before midnight
+        return $start_str . "~" . $end_str;
+        break;
+      case "> = ":         // Starts after midnight, ends at midnight
+        return $start_str . "~24:00";
+        break;
+      case "> > ":         // Starts after midnight, continues tomorrow
+        return $start_str . "~====&gt;";
+        break;
+      case "= = ":         // Starts at midnight, ends at midnight
+        return $all_day;
+        break;
+      case "= > ":         // Starts at midnight, continues tomorrow
+        return $all_day . "====&gt;";
+        break;
+      case "< < ":         // Starts before today, ends before midnight
+        return "&lt;====~" . $end_str;
+        break;
+      case "< = ":         // Starts before today, ends at midnight
+        return "&lt;====" . $all_day;
+        break;
+      case "< > ":         // Starts before today, continues tomorrow
+        return "&lt;====" . $all_day . "====&gt;";
+        break;
+    }
+  }
+
 }
 
 ?>

@@ -114,6 +114,18 @@ for ($j = 0; $j<=($num_of_days-1); $j++)
                                               $day_start_week+$j,
                                               $year,
                                               $eveningends));
+
+  if (empty( $enable_periods ))
+  {
+    $midnight[$j]=mktime(0,0,0,$month,$day_start_week+$j,$year, is_dst($month,$day_start_week+$j,$year, 0));
+    $midnight_tonight[$j]=mktime(23,59,59,$month,$day_start_week+$j,$year, is_dst($month,$day_start_week+$j,$year, 23));
+  }
+  else
+  {
+    $midnight[$j]=mktime(12,0,0,$month,$day_start_week+$j,$year, is_dst($month,$day_start_week+$j,$year, 0));
+    $midnight_tonight[$j]=mktime(12,count($periods),59,$month,$day_start_week+$j,$year, is_dst($month,$day_start_week+$j,$year, 23));
+  }
+
 }
 
 // Section with areas, rooms, minicals.
@@ -487,7 +499,7 @@ if ($times_along_top)
           $week_map[$room][$thisday][$time_t] = array();  // to avoid an undefined index NOTICE error
         }
         $cell_class = $row_class;
-        draw_cell($week_map[$room][$thisday][$time_t], $query_strings, $cell_class);
+        draw_cell($week_map[$room][$thisday][$time_t], $query_strings, $cell_class, $midnight[$thisday], $midnight_tonight[$thisday]);
       }  // end looping through the time slots
       if ( FALSE != $row_labels_both_sides )
       {
@@ -557,7 +569,7 @@ else
         {
           $cell_class = $row_class;
         }
-        draw_cell($week_map[$room][$thisday][$time_t], $query_strings, $cell_class);
+        draw_cell($week_map[$room][$thisday][$time_t], $query_strings, $cell_class, $midnight[$thisday], $midnight_tonight[$thisday]);
       }
   
     }    // for loop

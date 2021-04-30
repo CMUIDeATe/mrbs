@@ -392,6 +392,17 @@ else
   
   $row_class = "even_row";
   
+  if (empty( $enable_periods ))
+  {
+    $midnight=mktime(0,0,0,$month,$day,$year, is_dst($month,$day,$year, 0));
+    $midnight_tonight=mktime(23,59,59,$month,$day,$year, is_dst($month,$day,$year, 23));
+  }
+  else
+  {
+    $midnight=mktime(12,0,0,$month,$day,$year, is_dst($month,$day,$year, 0));
+    $midnight_tonight=mktime(12,count($periods),59,$month,$day,$year, is_dst($month,$day,$year, 23));
+  }
+
   // We can display the table in two ways
   if ($times_along_top)
   {
@@ -428,7 +439,7 @@ else
           $today[$room_id][$day][$time_t] = array();  // to avoid an undefined index NOTICE error
         }   
         $cell_class = $row_class;
-        draw_cell($today[$room_id][$day][$time_t], $query_strings, $cell_class);
+        draw_cell($today[$room_id][$day][$time_t], $query_strings, $cell_class, $midnight, $midnight_tonight);
       }  // end for (looping through the times)
       if ( FALSE != $row_labels_both_sides )
       {
@@ -481,7 +492,7 @@ else
         {
           $cell_class = $row_class;
         }
-        draw_cell($today[$room_id][$day][$time_t], $query_strings, $cell_class);
+        draw_cell($today[$room_id][$day][$time_t], $query_strings, $cell_class, $midnight, $midnight_tonight);
       }
       
       // next lines to display times on right side
