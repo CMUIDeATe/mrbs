@@ -57,6 +57,10 @@ $now = time();
 # A default set of instructions that can be overridden.
 $room_instructions = "For service requests,<br/>email <b>help@ideate.cmu.edu</b>";
 switch (strtoupper($_GET['room'])) {
+  case 'A4': # Classroom
+    $room_id = 70;
+    $room_dir = 'left';
+    break;
   case 'A5': # Experimental Fabrication
     $room_id = 42;
     $room_dir = 'left';
