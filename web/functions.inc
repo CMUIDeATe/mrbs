@@ -151,7 +151,7 @@ function toTimeString(&$dur, &$units)
   {
     $dur /= 60;
 
-    if ($dur >= 60)
+    if((($dur >= 120) && ($dur % 15 == 0)) || $dur >= 240)
     {
       $dur /= 60;
 
