@@ -259,8 +259,8 @@ function getClassroomStatus($room) {
     $result2 = $mysqli->query("select id,create_by,name,type,room_id,start_time,end_time from mrbs_entry where start_time > ".$now." and type != 'F' and room_id = ".$room." order by start_time limit 1");
     $row2 = $result2->fetch_array();
 
-    # If that's in the next 15 minutes, warn folks and tell them when contiguous reservations end.
-    if ($row2['start_time'] <= $now + (15*60)) {
+    # If that's in the next 20 minutes, warn folks and tell them when contiguous reservations end.
+    if ($row2['start_time'] <= $now + (20*60)) {
       $r['class'] = 'caution';
       if ($row2['type'] == "E") {
         $r['tag'] = 'Closing Soon';
@@ -458,7 +458,8 @@ function busy_until($room, $start_time) {
   $num_results = 1;
   while ($num_results > 0) {
     # If we come to type F (freely available), it doesn't count as busy.
-    $result = $mysqli->query("select id,create_by,name,type,room_id,start_time,end_time from mrbs_entry where start_time <= ".$busy_until." and end_time > ".$busy_until." and type != 'F' and room_id = ".$room." order by end_time desc limit 1"); # get latest end time possible
+    # But if the gap between reservations is 30 minutes or less, it still counts as busy.
+    $result = $mysqli->query("select id,create_by,name,type,room_id,start_time,end_time from mrbs_entry where start_time <= ".($busy_until + (30*60))." and end_time > ".$busy_until." and type != 'F' and room_id = ".$room." order by end_time desc limit 1"); # get latest end time possible
     $num_results = $result->num_rows;
     if ($num_results > 0) {
       $row = $result->fetch_array();
