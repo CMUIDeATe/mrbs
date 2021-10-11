@@ -25,7 +25,7 @@ switch ($default_view)
     $redirect_str = "week.php?year=$year&month=$month&day=$day";
     break;
   default:
-    $redirect_str = "day.php?day=$day&month=$month&year=$year";
+    $redirect_str = "day.php?year=$year&month=$month&day=$day";
 }
 
 if ( ! empty($default_room) )
