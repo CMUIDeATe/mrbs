@@ -275,6 +275,25 @@ switch($dur_units)
 // Units are now in "$dur_units" numbers of seconds
 
 
+// Get current user's privilege level
+$sql = "SELECT * FROM $tbl_users WHERE user_login='" . getUserName() . "'";
+
+$res = sql_query($sql);
+if (! $res)
+  {
+    fatal_error(1, sql_error());
+  }
+if (sql_count($res) != 1)
+  {
+    fatal_error(1, sql_error());
+  }
+
+$row = sql_row_keyed($res, 0);
+$level = $row['level'];
+sql_free($res);
+
+
+
 if (isset($all_day) && ($all_day == "yes"))
 {
   if ( $enable_periods )
@@ -316,11 +335,16 @@ else
                       $month, $day, $year,
                       is_dst($month, $day, $year, $hour)) + (int)($units * $duration);
 
-  // Round down the starttime and round up the endtime to the nearest slot boundaries                   
+  // Round down the starttime and round up the endtime to the nearest slot boundaries,
+  // but not for administrative users
   $am7=mktime($morningstarts,$morningstarts_minutes,0,
               $month,$day,$year,is_dst($month,$day,$year,$morningstarts));
-  $starttime = round_t_down($starttime, $resolution, $am7);
-  $endtime = round_t_up($endtime, $resolution, $am7);
+  if ($level <= 1)
+  {
+    $starttime = round_t_down($starttime, $resolution, $am7);
+    $endtime = round_t_up($endtime, $resolution, $am7);
+  }
+
   
   // If they asked for 0 minutes, and even after the rounding the slot length is still
   // 0 minutes, push that up to 1 resolution unit.
