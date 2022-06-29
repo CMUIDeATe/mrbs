@@ -15,27 +15,31 @@ $now = time();
   body { background: #c6c8c7; margin: 0; font-family: 'Open Sans'; overflow: hidden; }
 
   #status { text-align: center; width: 100%; padding: 1vh; min-height: 14.5vh; }
-  #status.available { background: #085; color: #fff; }
-  #status.caution { background: #a60; color: #fff; }
-  #status.reserved { background: #b00; color: #fff; }
+  #status.available { background: #00853e; color: #fff; }
+  #status.caution { background: #fdb515; color: #000; }
+  #status.reserved { background: #c41230; color: #fff; }
   #status #room-arrow { width: 10%; }
   #status #tag { font-size: 5vh; font-weight: 600; }
   #status #event { font-size: 2.5vh; color: #c6c8c7; }
+  #status.caution #event { font-size: 2.5vh; color: #4d5051; }
   #status #until { font-size: 3.5vh; }
   #status #extra { font-size: 2.5vh; font-weight: 600; }
+
+  #status .arrow { fill: #fff; }
+  #status.caution .arrow { fill: #000; }
 
   #reservations { padding: 1vh; }
   #reservations .date, #hours .heading { text-transform: uppercase; text-align: center; font-size: 2vh; letter-spacing: 0.5vw; color: #5f6369; padding: 1.5vh 0 0.5vh 0; }
   #reservations #reservations-list { list-style: none; padding: 0; }
   #reservations #reservations-list li { padding: 0.5vh 0 0.5vh 3vh; text-indent: -3vh; font-size: 2.5vh; }
   #reservations-list li .time { font-weight: bold; }
-  #reservations-list li.A .name { color: #005; }
-  #reservations-list li.B .name { color: #740; }
+  #reservations-list li.A .name { color: #033066; }
+  #reservations-list li.B .name { color: #664808; }
   #reservations-list li.C .name { color: #333; }
-  #reservations-list li.D .name { color: #042; }
+  #reservations-list li.D .name { color: #006630; }
   #reservations-list li.E { font-size: 1.5vh !important; font-style: italic; color: #999; padding-top: 0.25vh !important; padding-bottom: 0.25vh !important; }
-  #reservations-list li.E-closed .name { color: #b00; font-weight: 600; }
-  #reservations-list li.I .name { color: #700; }
+  #reservations-list li.E-closed .name { color: #c41230; font-weight: 600; }
+  #reservations-list li.I .name { color: #660919; }
 
   #by-appointment { background: #5f6369; color: #c6c8c7; text-align: center; width: 90%; margin: 3vh 5% 3vh 5%; padding: 1vh 0; font-size: 2.5vh; }
 
@@ -419,7 +423,7 @@ function printStatus($status, $room_dir) {
       if ($room_dir == 'left') {
         $r .= "<td id=\"room-arrow\" width=\"10%\" valign=\"middle\">";
           $r .= "<svg version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" viewBox=\"0 0 10 20\" width=\"20\" height=\"40\">";
-            $r .= "<polygon points=\"10,0 0,10 10,20\" style=\"fill: #fff;\" />";
+            $r .= "<polygon points=\"10,0 0,10 10,20\" class=\"arrow\" />";
           $r .= "</svg>";
         $r .= "</td>";
       }
@@ -440,7 +444,7 @@ function printStatus($status, $room_dir) {
       if ($room_dir == 'right') {
         $r .= "<td id=\"room-arrow\" width=\"10%\" valign=\"middle\">";
           $r .= "<svg version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" viewBox=\"0 0 10 20\" width=\"20\" height=\"40\">";
-            $r .= "<polygon points=\"0,0 10,10 0,20\" style=\"fill: #fff;\" />";
+            $r .= "<polygon points=\"0,0 10,10 0,20\" class=\"arrow\" />";
           $r .= "</svg>";
         $r .= "</td>";
       }
