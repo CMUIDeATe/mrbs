@@ -25,6 +25,8 @@ $now = time();
   #reservations-list li.E-closed .name { color: #b00; font-weight: 600; }
   #reservations-list li.I .name { color: #700; }
 
+  #by-appointment { background: #5f6369; color: #c6c8c7; text-align: center; width: 90%; margin: 0.3em 5% 0.3em 5%; padding: 0.1em 0; font-size: 9pt; }
+
   #hours { padding: 1em; }
   #hours .date { text-transform: uppercase; text-align: right; line-height: 1em; color: #5f6369; font-weight: normal; padding: 0.25em 0.5em 0 0; }
   #hours table { width: 100%; }
@@ -38,8 +40,32 @@ $now = time();
 
 
 
-# Always use Lending Booth (A29)
-$room_id = 66;
+# Select room.
+switch (strtoupper($_GET['room'])) {
+  #case 'A5': # Experimental Fabrication
+  #  $room_id = 42;
+  #  break;
+  #case 'A10': # Physical Computing
+  #  $room_id = 60;
+  #  break;
+  #case 'A10A': # Media Lab
+  #  $room_id = 56;
+  #  break;
+  case 'A29': # Lending Desk
+    $room_id = 66;
+    break;
+  case 'A30': # Wood Shop
+    $room_id = 43;
+    break;
+  #case '106B': # Studio A
+  #  $room_id = 58;
+  #  break;
+  #case '106C': # Studio B
+  #  $room_id = 59;
+  #  break;
+  default:
+    $room_id = 0;
+}
 
 for ($i = 0; $i <= 8; $i++) {
   $dates[$i] = strtotime("today 00:00:00 +".$i." days", $now);
@@ -57,7 +83,7 @@ $mysqli->close();
 # -----------------------------------------------------
 
 function getLendingHours($room_id, $dates) {
-  global $mysqli;
+  global $mysqli, $now;
 
   $r = '';
   # Today
@@ -80,6 +106,39 @@ function getLendingHours($room_id, $dates) {
 
   $r .= "</td>";
   $r .= "</tr>";
+
+
+  # Alert about "by appointment" scheduling if necessary
+  $alert_appointments = false;
+  # Friday of spring exams (Friday between 6 and 12 May)
+  $summer_starts = strtotime("5 May ".date("Y",$now)." next Friday");
+  # Saturday before fall classes (Saturday between 23 and 29 August)
+  $summer_ends = strtotime("22 August ".date("Y",$now)." next Saturday");
+
+  if ($now >= $summer_starts && $now < $summer_ends) {
+    $alert_appointments = true;
+  }
+  else {
+    # This heuristic which checks the next 4 days, starting now, works well for
+    # holidays during the academic year.
+    $upcoming_types = '';
+    $result = $mysqli->query("select type from mrbs_entry where end_time > ".$now." and start_time < ".$dates[4]." and room_id = ".$room_id." order by start_time");
+    while ($row = $result->fetch_array()) {
+      $upcoming_types .= $row['type'];
+    }
+    # If only E (library closed) and I (other), or if no B (open), the alert is necessary.
+    if (preg_match('/[EI]*E[EI*]$/', $upcoming_types) || !(preg_match('/B/', $upcoming_types))) {
+      $alert_appointments = true;
+    }
+    $result->free();
+  }
+
+  if ($alert_appointments) {
+    $r .= "<div id=\"by-appointment\">";
+    $r .= "Advance appointments can be<br/>scheduled via <b>help@ideate.cmu.edu</b>";
+    $r .= "</div>";
+  }
+
 
   # Moving forward
   for ($i = 1; $i < 8; $i++) {
