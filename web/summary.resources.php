@@ -92,7 +92,7 @@ function getLendingHours($room_id, $dates) {
   $r .= "<th valign=\"top\" class=\"date\"><b>Today,</b> ".date("<b>D</b> j M", $dates[0])."</th>";
   $r .= "<td valign=\"top\">";
 
-  $result = $mysqli->query("select id,create_by,name,type,room_id,start_time,end_time from mrbs_entry where end_time > ".$dates[0]." and start_time < ".$dates[1]." and room_id = ".$room_id." order by start_time");
+  $result = $mysqli->query("select id,create_by,name,type,room_id,start_time,end_time from mrbs_entry where end_time > ".$dates[0]." and start_time <= ".$dates[1]." and room_id = ".$room_id." order by start_time");
   $r .= "<ul id=\"reservations-list\" class=\"today\">";
   if ($result->num_rows > 0) {
     # TODO: Also print "CLOSED" if lending is closed even if library is not.
@@ -122,7 +122,7 @@ function getLendingHours($room_id, $dates) {
     # This heuristic which checks the next 4 days, starting now, works well for
     # holidays during the academic year.
     $upcoming_types = '';
-    $result = $mysqli->query("select type from mrbs_entry where end_time > ".$now." and start_time < ".$dates[4]." and room_id = ".$room_id." order by start_time");
+    $result = $mysqli->query("select type from mrbs_entry where end_time > ".$now." and start_time <= ".$dates[4]." and room_id = ".$room_id." order by start_time");
     while ($row = $result->fetch_array()) {
       $upcoming_types .= $row['type'];
     }
@@ -145,7 +145,7 @@ function getLendingHours($room_id, $dates) {
     $r .= "<tr>";
     $r .= "<th valign=\"top\" class=\"date\">".date("<b>D</b> j M", $dates[$i])."</th>";
     $r .= "<td valign=\"top\">";
-    $result = $mysqli->query("select id,create_by,name,type,room_id,start_time,end_time from mrbs_entry where end_time > ".$dates[$i]." and start_time < ".$dates[$i+1]." and room_id = ".$room_id." order by start_time");
+    $result = $mysqli->query("select id,create_by,name,type,room_id,start_time,end_time from mrbs_entry where end_time > ".$dates[$i]." and start_time <= ".$dates[$i+1]." and room_id = ".$room_id." order by start_time");
     $r .= "<ul id=\"reservations-list\">";
     if ($result->num_rows > 0) {
       # TODO: Also print "CLOSED" if lending is closed even if library is not.
