@@ -144,6 +144,10 @@ $this_room_name = htmlspecialchars(sql_query1("select room_name
                                   from $tbl_room where id=$room"));
 
 $sql = "select id, area_name from $tbl_area order by area_name";
+// Don't offer area selection in public embeds.
+if ($_SERVER['REMOTE_USER'] == 'ideate-public') {
+  $sql .= " where id = 8";
+}
 $res = sql_query($sql);
 // Show all available areas
 // but only if there's more than one of them, otherwise there's no point

@@ -73,6 +73,11 @@ function showAccessDenied($day, $month, $year, $area, $room)
   print_header($day, $month, $year, $area, isset($room) ? $room : "");
 ?>
   <h1><?php echo get_vocab("accessdenied")?></h1>
+<?php
+  if ($_SERVER['REMOTE_USER'] == 'ideate-public') {
+    echo "<strong>You are accessing a public version of this system and are not logged in.</strong>";
+  }
+?>
   <p>
    <?php echo get_vocab("norights")?>
   </p>

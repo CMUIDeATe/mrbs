@@ -166,6 +166,10 @@ function ChangeOptionDays(formObj, prefix)
   }
 ?>
 
+<?php
+  // Don't print the visible header in public embeds.
+  if ($_SERVER['REMOTE_USER'] != 'ideate-public') {
+?>
   <table id="banner">
     <tr>
       <td id="company">
@@ -286,6 +290,9 @@ function ChangeOptionDays(formObj, prefix)
       ?>
     </tr>
   </table>
+<?php
+  } // endif 'ideate-public'
+?>
 </div>
 <?php
 

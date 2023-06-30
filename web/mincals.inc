@@ -3,6 +3,11 @@
 
 function minicals($year, $month, $day, $area, $room, $dmy) {
 
+// Don't print the minicals in public embeds.
+if ($_SERVER['REMOTE_USER'] == 'ideate-public') {
+  return;
+}
+
 // PHP Calendar Class
 //  
 // Copyright David Wilkinson 2000. All Rights reserved.
