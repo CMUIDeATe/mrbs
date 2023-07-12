@@ -1,290 +1,660 @@
 <?php
+namespace MRBS;
 
-// $Id: header.inc 1092 2009-04-16 13:23:57Z cimorrison $
+use chillerlan\QRCode\QRCode;
+use chillerlan\QRCode\QROptions;
+use MRBS\Form\ElementInputDate;
+use MRBS\Form\ElementInputSearch;
+use MRBS\Form\ElementInputSubmit;
+use MRBS\Form\Form;
+
+
+function print_head($simple=false)
+{
+  global $refresh_rate;
+
+  echo "<head>\n";
+
+  echo "<meta charset=\"" . get_charset() . "\">\n";
+
+  // Set IE=edge so that IE10 will display MRBS properly, even if compatibility mode is used
+  // on the browser.  If we don't do this then MRBS will treat IE10 as an unsupported browser
+  // when compatibility mode is turned on, potentially confusing users who may have forgotten
+  // that they are using compatibility mode.   Unfortunately we can't set IE=edge in the header,
+  // which is where we would normally do it, because then we won't be able to detect IE9 using
+  // conditional comments.  So we have to do it in a <meta> tag, after the conditional comments
+  // around the <html> tags.
+  echo "<meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n";
+
+  // Improve scaling on mobile devices
+  echo "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n";
+
+  if (!$simple)
+  {
+    // Add the CSRF token so that JavaScript can use it
+    echo "<meta name=\"csrf_token\" content=\"" . htmlspecialchars(Form::getToken()) . "\">\n";
+  }
+
+  echo "<meta name=\"robots\" content=\"noindex, nofollow, noarchive\">\n";
+
+  if (($refresh_rate != 0) && (this_page(false, '.php') == 'index'))
+  {
+    // If we're using JavaScript we'll do the refresh by getting a new
+    // table using Ajax requests, which means we only have to download
+    // the table not the whole page each time
+    echo "<noscript>\n";
+    echo "<meta http-equiv=\"Refresh\" content=\"$refresh_rate\">\n";
+    echo "</noscript>\n";
+  }
+
+  echo "<title>" . get_vocab("mrbs") . "</title>\n";
+
+  require_once MRBS_ROOT . "/style.inc";
+
+  if (!$simple)
+  {
+    require_once MRBS_ROOT . "/js.inc";
+  }
+
+  echo "</head>\n";
+}
+
+
+// Print the basic site information.   This function is used for all headers, including
+// the simple header, and so mustn't require any database access.
+function print_header_site_info()
+{
+  global $mrbs_company,
+         $mrbs_company_url,
+         $mrbs_company_logo,
+         $mrbs_company_more_info;
+
+  // Company logo, with a link to the company
+  if (!empty($mrbs_company_logo))
+  {
+    echo "<div class=\"logo\">\n";
+    if (!empty($mrbs_company_url))
+    {
+      echo '<a href="' . htmlspecialchars($mrbs_company_url) . '">';
+    }
+    // Suppress error messages in case the logo is a URL, in which case getimagesize() can
+    // fail for any number of reasons, eg (a) allow_url_fopen is not enabled in php.ini or
+    // (b) "SSL operation failed with code 1. OpenSSL Error messages: error:1416F086:SSL
+    // routines:tls_process_server_certificate:certificate verify failed".   As the image
+    // size is not essential we'll just carry on.
+    $logo_size = @getimagesize($mrbs_company_logo);
+    echo '<img src="' . $mrbs_company_logo . '"';
+    echo ' alt="' . htmlspecialchars($mrbs_company) . '"';
+    if (is_array($logo_size))
+    {
+      echo ' ' . $logo_size[3];
+    }
+    echo '>';
+
+    if (!empty($mrbs_company_url))
+    {
+      echo "</a>\n";
+    }
+    echo "</div>\n";
+  }
+
+  // Company name, any extra company info and MRBS
+  echo "<div class=\"company\">\n";
+  if (!empty($mrbs_company_url))
+  {
+    echo '<a href="' . htmlspecialchars($mrbs_company_url) . '">';
+  }
+  echo '<span>' . htmlspecialchars($mrbs_company) . '</span>';
+  if (!empty($mrbs_company_url))
+  {
+    echo "</a>\n";
+  }
+  if (!empty($mrbs_company_more_info))
+  {
+    // Do not put $mrbs_company_more_info through htmlspecialchars() as it is
+    // trusted and allowed to contain HTML.
+    echo "<span class=\"company_more_info\">$mrbs_company_more_info</span>\n";
+  }
+  echo '<a href="' . htmlspecialchars(multisite('index.php')) . '">' . get_vocab('mrbs') . "</a>\n";
+  echo "</div>\n";
+}
+
+
+function print_goto_date($context)
+{
+  global $multisite, $site;
+
+  if (!checkAuthorised('index.php', true))
+  {
+    // Don't show the goto box if the user isn't allowed to view the calendar
+    return;
+  }
+
+  $form = new Form();
+
+  $form_id = 'form_nav';
+
+  $form->setAttributes(array('id'     => $form_id,
+                             'class'  => 'js_hidden',
+                             'method' => 'get',
+                             'action' => multisite('index.php')))
+       ->addHiddenInput('view', $context['view']);
+
+  if (isset($context['area']))
+  {
+    $form->addHiddenInput('area', $context['area']);
+  }
+
+  if (isset($room))
+  {
+    $form->addHiddenInput('room', $context['room']);
+  }
+
+  if ($multisite && isset($site) && ($site !== ''))
+  {
+    $form->addHiddenInput('site', $site);
+  }
+
+  $input = new ElementInputDate();
+  $input->setAttributes(array('name'        => 'page_date',
+                              'value'       => format_iso_date($context['year'], $context['month'], $context['day']),
+                              'aria-label'  => get_vocab('goto'),
+                              'required'    => true,
+                              'data-submit' => $form_id));
+
+  $form->addElement($input);
+
+  $submit = new ElementInputSubmit();
+  $submit->setAttribute('value', get_vocab('goto'));
+  $form->addElement($submit);
+
+  $form->render();
+}
+
+
+function print_outstanding($query)
+{
+  $mrbs_user = session()->getCurrentUser();
+
+  if (!isset($mrbs_user))
+  {
+    return;
+  }
+
+  // Provide a link to the list of bookings awaiting approval
+  // (if there are any enabled areas where we require bookings to be approved)
+  $approval_somewhere = some_area('approval_enabled', TRUE);
+  if ($approval_somewhere && ($mrbs_user->level > 0))
+  {
+    $n_outstanding = get_entries_n_outstanding($mrbs_user);
+
+    $class = 'notification';
+
+    if ($n_outstanding > 0)
+    {
+      $class .= ' attention';
+    }
+
+    echo '<a href="' . htmlspecialchars(multisite("pending.php?$query")) . '"' .
+         " class=\"$class\"" .
+         ' title="' . get_vocab('outstanding', $n_outstanding) .
+         "\">$n_outstanding</a>\n";
+  }
+}
+
+
+function print_menu_items($query)
+{
+  global $auth, $kiosk_mode_enabled;
+
+  $menu_items = array('help'   => 'help.php',
+                      'report' => 'report.php',
+                      'import' => 'import.php');
+
+  if ($kiosk_mode_enabled)
+  {
+    $menu_items['kiosk'] = 'kiosk.php';
+  }
+
+  $menu_items['rooms'] = 'admin.php';
+
+  if ($auth['type'] == 'db')
+  {
+    $menu_items['user_list'] = 'edit_users.php';
+  }
+
+  foreach ($menu_items as $token => $page)
+  {
+    // Only print menu items for which the user is allowed to access the page
+    if (checkAuthorised($page, true))
+    {
+      echo '<a href="' . htmlspecialchars(multisite("$page?$query")) . '">' . get_vocab($token) . "</a>\n";
+    }
+  }
+}
+
+
+
+function print_search($context)
+{
+  if (!checkAuthorised('search.php', true))
+  {
+    // Don't show the search box if the user isn't allowed to search
+    return;
+  }
+
+  echo "<div>\n";
+
+  $form = new Form();
+
+  $form->setAttributes(array(
+          'id'     => 'header_search',
+          'method' => 'post',
+          'action' => multisite('search.php'))
+        )
+       ->addHiddenInputs(array(
+          'view'       => $context['view'],
+          'year'       => $context['year'],
+          'month'      => $context['month'],
+          'day'        => $context['day'],
+          'from_date'  => format_iso_date($context['year'], $context['month'], $context['day'])
+        )
+     );
+
+  if (!empty($context['area']))
+  {
+    $form->addHiddenInput('area', $context['area']);
+  }
+  if (!empty($context['room']))
+  {
+    $form->addHiddenInput('room', $context['room']);
+  }
+
+  $input = new ElementInputSearch();
+  $search_vocab =  get_vocab('search');
+
+  $input->setAttributes(array('name'        => 'search_str',
+                              'placeholder' => $search_vocab,
+                              'aria-label'  => $search_vocab,
+                              'required'    => true));
+
+  $form->addElement($input);
+
+  $submit = new ElementInputSubmit();
+  $submit->setAttributes(array('value' => get_vocab('search_button'),
+                               'class' => 'js_none'));
+  $form->addElement($submit);
+
+  $form->render();
+
+  echo "</div>\n";
+}
+
+
+// Generate the username link, which gives a report on the user's upcoming bookings.
+function print_report_link(User $user)
+{
+  // If possible, provide a link to the Report page, otherwise the Search page
+  // and if that's not possible just print the username with no link.  (Note that
+  // the Search page isn't the perfect solution because it searches for any bookings
+  // containing the search string, not just those created by the user.)
+  if (checkAuthorised('report.php', true))
+  {
+    $attributes = array('action' => multisite('report.php'));
+    $hidden_inputs = array('phase'        => '2',
+                           'creatormatch' => $user->username);
+  }
+  elseif (checkAuthorised('search.php', true))
+  {
+    $attributes = array('action' => multisite('search.php'));
+    $hidden_inputs = array('search_str' => $user->username);
+  }
+  else
+  {
+    echo '<span>' . htmlspecialchars($user->display_name) . '</span>';
+    return;
+  }
+
+  // We're authorised for either Report or Search so print the form.
+  $form = new Form();
+
+  $attributes['id'] = 'show_my_entries';
+  $attributes['method'] = 'post';
+  $form->setAttributes($attributes)
+       ->addHiddenInputs($hidden_inputs);
+
+  $submit = new ElementInputSubmit();
+  $submit->setAttributes(array('title' => get_vocab('show_my_entries'),
+                               'value' => $user->display_name));
+  $form->addElement($submit);
+
+  $form->render();
+}
+
+
+function print_logonoff_button($params, $value)
+{
+  $form = new Form();
+  $form->setAttributes(array('method' => $params['method'],
+                             'action' => $params['action']));
+
+  // A Get method will replace the query string in the action URL with a query
+  // string made up of the hidden inputs.  So put any parameters in the action
+  // query string into hidden inputs.
+  if (utf8_strtolower($params['method']) == 'get')
+  {
+    $query_string = parse_url($params['action'], PHP_URL_QUERY);
+    if (isset($query_string))
+    {
+      parse_str($query_string, $query_parameters);
+      $form->addHiddenInputs($query_parameters);
+    }
+  }
+
+  // Add the hidden fields
+  if (isset($params['hidden_inputs']))
+  {
+    $form->addHiddenInputs($params['hidden_inputs']);
+  }
+
+  // The submit button
+  $element = new ElementInputSubmit();
+  $element->setAttribute('value', $value);
+  $form->addElement($element);
+
+  $form->render();
+}
+
+
+function print_logon()
+{
+  if (method_exists(session(), 'getLogonFormParams'))
+  {
+    $form_params = session()->getLogonFormParams();
+    if (isset($form_params))
+    {
+      print_logonoff_button($form_params, get_vocab('login'));
+    }
+  }
+}
+
+
+function print_logoff()
+{
+  if (method_exists(session(), 'getLogoffFormParams'))
+  {
+    $form_params = session()->getLogoffFormParams();
+    if (isset($form_params))
+    {
+      print_logonoff_button($form_params, get_vocab('logoff'));
+    }
+  }
+}
+
+// $context is an associative array indexed by 'view', 'view_all', 'year', 'month', 'day', 'area' and 'room'.
+// When $omit_login is true the Login link is omitted.
+function print_banner($context, $simple=false, $omit_login=false)
+{
+  global $kiosk_QR_code, $auth;
+
+  echo '<header class="banner' . (($simple) ? ' simple' : '') . "\">\n";
+
+  $vars = array();
+
+  if (isset($context['view']))
+  {
+    $vars['view'] = $context['view'];
+  }
+  if (isset($context['year']) && isset($context['month']) && isset($context['day']))
+  {
+    $vars['page_date'] = format_iso_date($context['year'], $context['month'], $context['day']);
+  }
+  if (isset($context['area']))
+  {
+    $vars['area'] = $context['area'];
+  }
+  if (isset($context['room']))
+  {
+    $vars['room'] = $context['room'];
+  }
+
+  $query = http_build_query($vars, '', '&');
+
+  print_header_site_info();
+
+  if (!$simple)
+  {
+    echo "<nav class=\"container\">\n";
+
+    echo "<nav>\n";
+
+    echo "<nav class=\"menu\">\n";
+    print_menu_items($query);
+    echo "</nav>\n";
+
+    echo "<nav class=\"logon\">\n";
+    print_outstanding($query);
+
+    $mrbs_user = session()->getCurrentUser();
+
+    // The empty string username is a special case when using anonymous booking
+    if (isset($mrbs_user) && (!$auth['allow_anonymous_booking'] || ($mrbs_user->username !== '')))
+    {
+      print_report_link($mrbs_user);
+      print_logoff();
+    }
+    elseif (!$omit_login)
+    {
+      print_logon();
+    }
+
+    echo "</nav>\n";
+
+    echo "</nav>\n";
+
+    echo "<nav>\n";
+    print_goto_date($context);
+    print_search($context);
+    echo "</nav>\n";
+
+    echo "</nav>\n";
+
+    // Add in a QR code for kiosk mode
+    // (The QR code library requires PHP 7.4 or greater)
+    if (isset($context['kiosk']) &&
+        $kiosk_QR_code &&
+        (version_compare(PHP_VERSION, 7.4) >= 0))
+    {
+      $url = multisite(url_base() . "/index.php?$query");
+      echo '<nav class="qr" title="' . htmlspecialchars($url) . "\">\n";
+      $options = new QROptions([
+        'outputType'  => QRCode::OUTPUT_MARKUP_SVG,
+        'imageBase64' => false,
+      ]);
+      $qrcode = new QRCode($options);
+      echo $qrcode->render($url);
+      echo "</nav>\n";
+    }
+  }
+
+  echo "</header>\n";
+}
+
+
+
+// Print a message which will only be displayed (thanks to CSS) if the user is
+// using an unsupported browser.
+function print_unsupported_message($context)
+{
+  echo "<div class=\"unsupported_message\">\n";
+  print_banner($context, $simple=true);
+  echo "<div class=\"contents\">\n";
+  echo "<p>" . get_vocab('browser_not_supported', get_vocab('mrbs_abbr')) . "</p>\n";
+  echo "</div>\n";
+  echo "</div>\n";
+}
+
 
 // Print the page header
-function print_theme_header($day, $month, $year, $area, $room)
+// $context is an associative array indexed by 'view', 'view_all', 'year', 'month', 'day', 'area' and 'room',
+// any of which can be NULL.
+// If $simple is true, then just print a simple header that doesn't require any database
+// access or JavaScript (useful for fatal errors and database upgrades).
+// When $omit_login is true the Login link is omitted.
+function print_theme_header($context=null, $simple=false, $omit_login=false)
 {
-  global $mrbs_company, $mrbs_company_logo, $mrbs_company_url, $mrbs_company_more_info,
-    $search_str, $locale_warning, $unicode_encoding, $vocab;
+  global $multisite, $site, $default_view, $default_view_all, $view_week_number, $style_weekends;
 
-  // If we dont know the right date then make it up 
-  if (!$day)
+  if ($simple)
   {
-    $day   = date("d");
-  }
-  if (!$month)
-  {
-    $month = date("m");
-  }
-  if (!$year)
-  {
-    $year  = date("Y");
-  }
-  if (empty($search_str))
-  {
-    $search_str = "";
-  }
-  
-  if ($unicode_encoding)
-  {
-    header("Content-Type: text/html; charset=utf-8");
+    $data = array();
+    $classes = array();
   }
   else
   {
-    // We use $vocab directly instead of get_vocab() because we have
-    // no requirement to convert the vocab text, we just output
-    // the charset
-    header("Content-Type: text/html; charset=".$vocab["charset"]);
-  }
-
-  header("Pragma: no-cache");                          // HTTP 1.0
-  header("Expires: Mon, 26 Jul 1997 05:00:00 GMT");    // Date in the past
-
-?>
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<html>
-  <head>
-<?php
-  require_once "style.inc";
-?>
-    <title><?php echo get_vocab("mrbs") ?></title>
-    <script type="text/javascript">
-
-//<![CDATA[
-
-/*   Script inspired by "True Date Selector"
-     Created by: Lee Hinder, lee.hinder@ntlworld.com 
-     
-     Tested with Windows IE 6.0
-     Tested with Linux Opera 7.21, Mozilla 1.3, Konqueror 3.1.0
-     
-*/
-
-function daysInFebruary (year)
-{
-  // February has 28 days unless the year is divisible by four,
-  // and if it is the turn of the century then the century year
-  // must also be divisible by 400 when it has 29 days
-  return (((year % 4 == 0) && ( (!(year % 100 == 0)) || (year % 400 == 0))) ? 29 : 28 );
-}
-
-//function for returning how many days there are in a month including leap years
-function DaysInMonth(WhichMonth, WhichYear)
-{
-  var DaysInMonth = 31;
-  if (WhichMonth == "4" || WhichMonth == "6" || WhichMonth == "9" || WhichMonth == "11")
-  {
-    DaysInMonth = 30;
-  }
-  if (WhichMonth == "2")
-  {
-    DaysInMonth = daysInFebruary( WhichYear );
-  }
-  return DaysInMonth;
-}
-
-//function to change the available days in a months
-function ChangeOptionDays(formObj, prefix)
-{
-  var DaysObject = eval("formObj." + prefix + "day");
-  var MonthObject = eval("formObj." + prefix + "month");
-  var YearObject = eval("formObj." + prefix + "year");
-
-  if (typeof DaysObject.selectedIndex == 'number' && DaysObject.options)
-  { // The DOM2 standard way
-    // alert("The DOM2 standard way");
-    var DaySelIdx = DaysObject.selectedIndex;
-    var Month = parseInt(MonthObject.options[MonthObject.selectedIndex].value);
-    var Year = parseInt(YearObject.options[YearObject.selectedIndex].value);
-  }
-  else if (DaysObject.selectedIndex && DaysObject[DaysObject.selectedIndex])
-  { // The legacy MRBS way
-    // alert("The legacy MRBS way");
-    var DaySelIdx = DaysObject.selectedIndex;
-    var Month = parseInt(MonthObject[MonthObject.selectedIndex].value);
-    var Year = parseInt(YearObject[YearObject.selectedIndex].value);
-  }
-  else if (DaysObject.value)
-  { // Opera 6 stores the selectedIndex in property 'value'.
-    // alert("The Opera 6 way");
-    var DaySelIdx = parseInt(DaysObject.value);
-    var Month = parseInt(MonthObject.options[MonthObject.value].value);
-    var Year = parseInt(YearObject.options[YearObject.value].value);
-  }
-
-  // alert("Day="+(DaySelIdx+1)+" Month="+Month+" Year="+Year);
-
-  var DaysForThisSelection = DaysInMonth(Month, Year);
-  var CurrentDaysInSelection = DaysObject.length;
-  if (CurrentDaysInSelection > DaysForThisSelection)
-  {
-    for (i=0; i<(CurrentDaysInSelection-DaysForThisSelection); i++)
+    // Set the context values if they haven't been given
+    if (!isset($context))
     {
-      DaysObject.options[DaysObject.options.length - 1] = null
+      $context = array();
+    }
+
+    if (empty($context['area']))
+    {
+      $context['area'] = get_default_area();
+    }
+
+    if (empty($context['room']))
+    {
+      $context['room'] = get_default_room($context['area']);
+    }
+
+    if (!isset($context['view']))
+    {
+      $context['view'] = (isset($default_view)) ? $default_view : 'day';
+    }
+
+    if (!isset($context['view_all']))
+    {
+      $context['view_all'] = (isset($default_view_all)) ? $default_view_all : true;
+    }
+
+    // Need to set the timezone before we can use date()
+    // This will set the correct timezone for the area
+    get_area_settings($context['area']);
+
+    // If we dont know the right date then use today's
+    if (!isset($context['year']))
+    {
+      $context['year'] = date('Y');
+    }
+
+    if (!isset($context['month']))
+    {
+      $context['month'] = date('m');
+    }
+
+    if (!isset($context['day']))
+    {
+      $context['day'] = date('d');
+    }
+
+    // Get the form token now, before any headers are sent, in case we are using the 'cookie'
+    // session scheme.  Otherwise we won't be able to store the Form token.
+    Form::getToken();
+
+    $page = this_page(false, '.php');
+
+    // Put some data attributes in the body element for the benefit of JavaScript.  Note that we
+    // cannot use these PHP variables directly in the JavaScript files as those files are cached.
+    $data = array(
+      'view'          => $context['view'],
+      'view_all'      => $context['view_all'],
+      'area'          => $context['area'],
+      'room'          => $context['room'],
+      'page'          => $page,
+      'page-date'     => format_iso_date($context['year'], $context['month'], $context['day']),
+      'is-admin'      => (is_admin()) ? 'true' : 'false',
+      'is-book-admin' => (is_book_admin()) ? 'true' : 'false',
+      'lang-prefs'    => json_encode(get_lang_preferences())
+    );
+
+    if ($multisite && isset($site) && ($site !== ''))
+    {
+      $data['site'] = $site;
+    }
+
+    if (isset($context['kiosk']))
+    {
+      $data['kiosk'] = $context['kiosk'];
+    }
+
+    $mrbs_user = session()->getCurrentUser();
+    if (isset($mrbs_user))
+    {
+      $data['username'] = $mrbs_user->username;
+    }
+
+    // We need $timetohighlight for the day and week views
+    $timetohighlight = get_form_var('timetohighlight', 'int');
+    if (isset($timetohighlight))
+    {
+      $data['timetohighlight'] = $timetohighlight;
+    }
+
+    // Put the filename in as a class to aid styling.
+    $classes[] = $page;
+    // And if the user is logged in, add another class to aid styling
+    if (isset($mrbs_user))
+    {
+      $classes[] = 'logged_in';
+    }
+
+    // To help styling
+    if ($view_week_number)
+    {
+      $classes[] = 'view_week_number';
+    }
+    if ($style_weekends)
+    {
+      $classes[] = 'style_weekends';
+    }
+
+  }
+
+  $headers = array("Content-Type: text/html; charset=" . get_charset());
+  http_headers($headers);
+
+  echo DOCTYPE . "\n";
+
+  // We produce two <html> tags: one for versions of IE that we don't support and one for all
+  // other browsers.  This enables us to use CSS to hide and show the appropriate text.
+  echo "<!--[if lte IE 9]>\n";
+  echo "<html lang=\"" . htmlspecialchars(get_mrbs_lang()) . "\" class=\"unsupported_browser\">\n";
+  echo "<![endif]-->\n";
+  echo "<!--[if (!IE)|(gt IE 9)]><!-->\n";
+  echo "<html lang=\"" . htmlspecialchars(get_mrbs_lang()) . "\">\n";
+  echo "<!--<![endif]-->\n";
+
+  print_head($simple);
+
+  echo '<body class="' . htmlspecialchars(implode(' ', $classes)) . '"';
+  foreach ($data as $key => $value)
+  {
+    if (isset($value))
+    {
+      echo " data-$key=\"" . htmlspecialchars($value) . '"';
     }
   }
-  if (DaysForThisSelection > CurrentDaysInSelection)
-  {
-    for (i=0; i<DaysForThisSelection; i++)
-    {
-      DaysObject.options[i] = new Option(eval(i + 1));
-    }
-  }
-  if (DaysObject.selectedIndex < 0)
-  {
-    DaysObject.selectedIndex = 0;
-  }
-  if (DaySelIdx >= DaysForThisSelection)
-  {
-    DaysObject.selectedIndex = DaysForThisSelection-1;
-  }
-  else
-  {
-    DaysObject.selectedIndex = DaySelIdx;
-  }
-}
+  echo ">\n";
 
-//]]>
-    </script>
-  </head>
-  <?php
-  // Put the filename in as a class to aid styling.   
-  // (Use a class rather than id to avoid specificity problems)
-  echo "<body class=\"" . basename($PHP_SELF,".php" ) . "\">\n";
-  ?>
-    <div class="screenonly">
+  print_unsupported_message($context);
 
-<?php // show a warning if this is using a low version of php
-  if (substr(phpversion(), 0, 1) == 3)
-  {
-    echo "<h1>" . get_vocab("not_php3") . "</h1>\n";
-  }
-  if (!empty($locale_warning))
-  {
-    echo "[Warning: ".$locale_warning."]";
-  }
-?>
+  print_banner($context, $simple, $omit_login);
 
-  <table id="banner">
-    <tr>
-      <td id="company">
-        <div>
-          <?php
-          echo "<div id=\"logo\">\n";
-          if (!empty($mrbs_company_url))
-          {
-            echo "<a href=\"$mrbs_company_url\">\n";
-          }
-          if (empty($mrbs_company_logo))
-          {
-            echo "<span>$mrbs_company</span>\n";
-          }
-          else
-          {
-            $logo_size = getimagesize($mrbs_company_logo);
-            echo "<img src=\"$mrbs_company_logo\" " . $logo_size[3] . " alt=\"logo\">\n";
-          }
-          if (!empty($mrbs_company_url))
-          {
-            echo "</a>\n";
-          }
-          echo "</div>\n";
-          if (!empty($mrbs_company_more_info))
-          {
-            echo "<div id=\"more_info\">$mrbs_company_more_info</div>\n";
-          }
-          ?>
-          <div id="mrbs">
-            <a href="index.php"><?php echo get_vocab("mrbs") ?></a>
-          </div>
-        </div>
-      </td>
-      <td>
-        <form action="day.php" method="get" id="Form1">
-          <div>
-            <?php
-            genDateSelector("", $day, $month, $year); // Note: The 1st arg must match the last arg in the call to ChangeOptionDays below.
-            if (!empty($area))
-            {
-              echo "<input type=\"hidden\" name=\"area\" value=\"$area\">\n";
-            }
-            if (!empty($room))
-            {
-              echo "<input type=\"hidden\" name=\"room\" value=\"$room\">\n";
-            }
-  
-            ?>
-            <script type="text/javascript">
-              //<![CDATA[
-              // fix number of days for the $month/$year that you start with
-              ChangeOptionDays(document.getElementById('Form1'), ''); // Note: The 2nd arg must match the first in the call to genDateSelector above.
-              //]]>
-            </script>
-            <input type="submit" value="<?php echo get_vocab("goto") ?>">
-          </div>
-        </form>
-      </td>
-      <?php
-      $query_str = "day=$day&amp;month=$month&amp;year=$year";
-      if (!empty($area))
-      {
-        $query_str .= "&amp;area=$area";
-      }
-      if (!empty($room))
-      {
-        $query_str .= "&amp;room=$room";
-      }
-      
-      echo "<td>\n";
-      echo "<a href=\"help.php?$query_str\">" . get_vocab("help") . "</a>\n";
-      echo "</td>\n";
-      
-      echo "<td>\n";
-      echo "<a href=\"admin.php?$query_str\">" . get_vocab("admin") . "</a>\n";
-      echo "</td>\n";
-      
-      echo "<td>\n";
-      echo "<a href=\"report.php?$query_str\">" . get_vocab("report") . "</a>\n";
-      echo "</td>\n";
-      ?>
-      
-      <td>
-        <form id="header_search" method="get" action="search.php">
-          <div>
-            <a href="search.php?advanced=1"><?php echo get_vocab("search") ?>:</a>
-            <input type="text"   name="search_str" value="<?php echo $search_str ?>">
-            <input type="hidden" name="day"        value="<?php echo $day        ?>">
-            <input type="hidden" name="month"      value="<?php echo $month      ?>">
-            <input type="hidden" name="year"       value="<?php echo $year       ?>">
-            <?php
-            if (!empty($area))
-            {
-              echo "<input type=\"hidden\" name=\"area\" value=\"$area\">\n";
-            }
-            if (!empty($room))
-            {
-              echo "<input type=\"hidden\" name=\"room\" value=\"$room\">\n";
-            }
-            ?>
-          </div>
-        </form>
-      </td>
-      <?php
-      // For session protocols that define their own logon box...
-      if (function_exists('PrintLogonBox'))
-      {
-        echo "<td>\n";
-        echo "<div id=\"logon_box\">\n";
-        PrintLogonBox(); 
-        echo "</div>\n";
-        echo "</td>\n";
-      }
-      ?>
-    </tr>
-  </table>
-</div>
-<?php
+  // This <div> should really be moved out of here so that we can always see
+  // the matching closing </div>
+  echo "<div class=\"contents\">\n";
+
 
 } // end of print_theme_header()
-?>
+

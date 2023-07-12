@@ -1,125 +1,322 @@
 <?php
-// $Id: search.php 1122 2009-06-19 21:58:03Z jberanek $
+namespace MRBS;
 
-require_once "grab_globals.inc.php";
-require_once "config.inc.php";
-require_once "functions.inc";
-require_once "dbsys.inc";
-require_once "mrbs_auth.inc";
+use MRBS\Form\ElementFieldset;
+use MRBS\Form\ElementInputSubmit;
+use MRBS\Form\FieldInputDate;
+use MRBS\Form\FieldInputSearch;
+use MRBS\Form\FieldInputSubmit;
+use MRBS\Form\Form;
 
-// Get form variables
-$day = get_form_var('day', 'int');
-$month = get_form_var('month', 'int');
-$year = get_form_var('year', 'int');
-$area = get_form_var('area', 'int');
-$room = get_form_var('room', 'int');
-$search_str = get_form_var('search_str', 'string');
-$search_pos = get_form_var('search_pos', 'int');
-$total = get_form_var('total', 'int');
-$advanced = get_form_var('advanced', 'int');
+require "defaultincludes.inc";
 
-$user = getUserName();
-$is_admin =  (isset($user) && authGetUserLevel($user)>=2) ;
 
-// If we dont know the right date then make it up 
-if (!isset($day) or !isset($month) or !isset($year))
+function get_search_nav_button(array $hidden_inputs, string $value, bool $disabled=false) : string
 {
-  $day   = date("d");
-  $month = date("m");
-  $year  = date("Y");
+  $form = new Form();
+  $form->setAttributes(array('action' => multisite(this_page()),
+                             'method' => 'post'));
+  $form->addHiddenInputs($hidden_inputs);
+  $submit = new ElementInputSubmit();
+  $submit->setAttributes(array('value'    => $value,
+                               'disabled' => $disabled));
+  $form->addElement($submit);
+
+  return $form->toHTML();
 }
 
-if (empty($area))
-{
-  $area = get_default_area();
-}
 
-// Need all these different versions with different escaping.
-if (!empty($search_str)) 
+function generate_search_nav_html(int $search_pos, int $total, int $num_records, string $search_str) : string
 {
-  $search_url = urlencode($search_str);
-  $search_html = htmlspecialchars($search_str);
-}
+  global $from_date;
+  global $search;
 
-print_header($day, $month, $year, $area, isset($room) ? $room : "");
+  $html = '';
 
-if (!empty($advanced))
-{
-  ?>
-  <form class="form_general" method="get" action="search.php">
-    <fieldset>
-    <legend><?php echo get_vocab("advanced_search") ?></legend>
-      <div id="div_search_str">
-        <label for="search_str"><?php echo get_vocab("search_for") ?>:</label>
-        <input type="text" id="search_str" name="search_str">
-      </div>   
-      <div id="div_search_from">
-        <label><?php echo get_vocab("from") ?>:</label>
-        <?php genDateSelector ("", $day, $month, $year) ?>
-      </div> 
-      <div id="search_submit">
-        <input class="submit" type="submit" value="<?php echo get_vocab("search_button") ?>">
-      </div>
-    </fieldset>
-  </form>
-  <?php
-  require_once "trailer.inc";
-  exit;
-}
+  $has_prev = $search_pos > 0;
+  $has_next = $search_pos < ($total-$search["count"]);
 
-# Require authenticated user if private bookings are required
-if ($private_override == "private")
-{
-  if (!getAuthorised(1))
+  if ($has_prev || $has_next)
   {
-    showAccessDenied($day, $month, $year, $area, "");
-    exit();
+    $html .= "<div id=\"record_numbers\">\n";
+    $html .= get_vocab("records") . ($search_pos+1) . get_vocab("through") . ($search_pos+$num_records) . get_vocab("of") . $total;
+    $html .= "</div>\n";
+
+    $html .= "<div id=\"record_nav\">\n";
+
+    // display "Previous" and "Next" buttons
+    $hidden_inputs = array('search_str' => $search_str,
+                           'total'      => $total,
+                           'from_date'  => $from_date);
+
+    $hidden_inputs['search_pos'] = max(0, $search_pos - $search['count']);
+    $html .= get_search_nav_button($hidden_inputs , get_vocab('previous'), !$has_prev);
+
+    $hidden_inputs['search_pos'] = max(0, $search_pos + $search['count']);
+    $html .= get_search_nav_button($hidden_inputs , get_vocab('next'), !$has_next);
+
+    $html .= "</div>\n";
   }
+
+  return $html;
 }
 
-if (!$search_str)
+
+function output_row($row, $returl)
 {
-  echo "<p class=\"error\">" . get_vocab("invalid_search") . "</p>";
-  require_once "trailer.inc";
-  exit;
-}
+  global $is_ajax, $json_data, $view;
 
-// now is used so that we only display entries newer than the current time
-echo "<h3>" . get_vocab("search_results") . ": \"<span id=\"search_str\">$search_html</span>\"</h3>\n";
+  $vars = array('id'     => $row['entry_id'],
+                'returl' => $returl);
 
-$now = mktime(0, 0, 0, $month, $day, $year);
+  $query = http_build_query($vars, '', '&');
 
-// This is the main part of the query predicate, used in both queries:
-// NOTE: sql_syntax_caseless_contains() does the SQL escaping
-    
-$sql_pred = "( " . sql_syntax_caseless_contains("E.create_by", $search_str)
-  . " OR " . sql_syntax_caseless_contains("E.name", $search_str)
-  . " OR " . sql_syntax_caseless_contains("E.description", $search_str)
-  . ") AND E.end_time > $now";
+  $values = array();
+  // booking name
+  $html_name = htmlspecialchars($row['name']);
+  $values[] = '<a title="' . $html_name . '"' .
+                ' href="' . htmlspecialchars(multisite("view_entry.php?$query")) . '">' . $html_name . '</a>';
+  // created by
+  $values[] = htmlspecialchars(get_compound_name($row['create_by']));
+  // start time and link to day view
+  $date = getdate($row['start_time']);
 
-# Unless we overriding privacy settings as "public" or user
-# is and admin, we have to restrict which listings are returned
-if (($private_override != "public") && !$is_admin) 
-{
-  if (isset($user)) 
+  $vars = array('view'  => $view,
+                'year'  => $date['year'],
+                'month' => $date['mon'],
+                'day'   => $date['mday'],
+                'area'  => $row['area_id'],
+                'room'  => $row['room_id']);
+
+  $query = http_build_query($vars, '', '&');
+
+  $link = '<a href="' . htmlspecialchars(multisite("index.php?$query")) . '">';
+
+  if(empty($row['enable_periods']))
   {
-    # If private bookings are forced then user can only
-    # search their own.  If not they can also search non-private entries
-    if ($private_override == "private") 
-    {
-      $sql_pred .= " AND E.create_by = '$user'";
-    }
-    else
-    {
-      $sql_pred .= " AND (E.create_by = '$user' OR NOT E.private)";
-    }
+    $link_str = time_date_string($row['start_time']);
   }
   else
   {
-    # If user isn't logged in then we already know
-    # override isn't set to "private" and we wouldn't
-    # be here if it were "public" so...
-    $sql_pred .= " AND NOT E.private";
+    list(,$link_str) = period_date_string($row['start_time'], $row['area_id']);
+  }
+  $link .= htmlspecialchars($link_str) ."</a>";
+  //    add a span with the numeric start time in the title for sorting
+  $values[] = "<span title=\"" . $row['start_time'] . "\"></span>" . $link;
+  // description
+  $values[] = htmlspecialchars($row['description'] ?? '');
+
+  if ($is_ajax)
+  {
+    $json_data['aaData'][] = $values;
+  }
+  else
+  {
+    echo "<tr>\n<td>\n";
+    echo implode("</td>\n<td>", $values);
+    echo "</td>\n</tr>\n";
+  }
+}
+
+$is_ajax = is_ajax();
+
+// Get non-standard form variables
+$search_str = get_form_var('search_str', 'string');
+$search_pos = get_form_var('search_pos', 'int');
+$total = get_form_var('total', 'int');
+$datatable = get_form_var('datatable', 'int');  // Will only be set if we're using DataTables
+// Get the start day/month/year and make them the current day/month/year
+$from_date = get_form_var('from_date', 'string');
+
+// If we're going to be doing something then check the CSRF token
+if (isset($search_str) && ($search_str !== ''))
+{
+  Form::checkToken(true);
+}
+
+// Check the user is authorised for this page
+checkAuthorised(this_page());
+
+$mrbs_user = session()->getCurrentUser();
+
+// Set up for Ajax.   We need to know whether we're capable of dealing with Ajax
+// requests, which will only be if the browser is using DataTables.  We also need
+// to initialise the JSON data array.
+$ajax_capable = $datatable;
+
+if ($is_ajax)
+{
+  $json_data['aaData'] = array();
+}
+
+if (!isset($search_str))
+{
+  $search_str = '';
+}
+
+if (isset($from_date))
+{
+  if (validate_iso_date($from_date))
+  {
+    $search_start_time = DateTime::createFromFormat('Y-m-d', $from_date)->getTimestamp();
+  }
+  else
+  {
+    unset($from_date);  // We don't want to perpetuate invalid from dates in the form
+  }
+}
+
+if (!$is_ajax) {
+  $context = array(
+    'view' => $view,
+    'view_all' => $view_all,
+    'year' => $year,
+    'month' => $month,
+    'day' => $day,
+    'area' => $area,
+    'room' => $room ?? null
+  );
+
+  print_header($context);
+
+  $form = new Form();
+  $form->setAttributes(array('class' => 'standard',
+    'id' => 'search_form',
+    'method' => 'post',
+    'action' => multisite(this_page())));
+
+  $fieldset = new ElementFieldset();
+  $fieldset->addLegend(get_vocab('search'));
+
+  // Search string
+  $field = new FieldInputSearch();
+  $field->setLabel(get_vocab('search_for'))
+    ->setControlAttributes(array('name' => 'search_str',
+      'value' => (isset($search_str)) ? $search_str : '',
+      'required' => true,
+      'autofocus' => true));
+  $fieldset->addElement($field);
+
+  // From date
+  $field = new FieldInputDate();
+  $field->setLabel(get_vocab('from'))
+    ->setControlAttributes(array(
+        'name'  => 'from_date',
+        'value' => $from_date ?? null)
+      );
+  $fieldset->addElement($field);
+
+  // Submit button
+  $field = new FieldInputSubmit();
+  $field->setControlAttribute('value', get_vocab('search_button'));
+  $fieldset->addElement($field);
+
+  $form->addElement($fieldset);
+
+  $form->render();
+
+  if (!isset($search_str) || ($search_str === '')) {
+    echo "<p class=\"error\">" . get_vocab("invalid_search") . "</p>";
+    print_footer();
+    exit;
+  }
+
+  echo '<h3 class="search_results">';
+  if (isset($search_start_time))
+  {
+    echo get_vocab(
+      'search_results',
+      htmlspecialchars($search_str),
+      htmlspecialchars(datetime_format($datetime_formats['date_search'], $search_start_time))
+    );
+  }
+  else
+  {
+    echo get_vocab('search_results_unlimited', htmlspecialchars($search_str));
+  }
+  echo "</h3>\n";
+}  // if (!$is_ajax)
+
+
+// This is the main part of the query predicate, used in both queries:
+// NOTE: syntax_caseless_contains() modifies our SQL params for us
+
+$sql_params = array();
+$sql_pred = "(( " . db()->syntax_caseless_contains("E.create_by", $search_str, $sql_params)
+  . ") OR (" . db()->syntax_caseless_contains("E.name", $search_str, $sql_params)
+  . ") OR (" . db()->syntax_caseless_contains("E.description", $search_str, $sql_params). ")";
+
+// Also need to search custom fields (but only those with character data,
+// which can include fields that have an associative array of options)
+$fields = db()->field_info(_tbl('entry'));
+foreach ($fields as $field)
+{
+  if (!in_array($field['name'], $standard_fields['entry']))
+  {
+    // If we've got a field that is represented by an associative array of options
+    // then we have to search for the keys whose values match the search string
+    if (isset($select_options["entry." . $field['name']]) &&
+        is_assoc($select_options["entry." . $field['name']]))
+    {
+      foreach($select_options["entry." . $field['name']] as $key => $value)
+      {
+        // We have to use strpos() rather than stripos() because we cannot
+        // assume PHP5
+        if (($key !== '') && (utf8_strpos(utf8_strtolower($value), utf8_strtolower($search_str)) !== false))
+        {
+          $sql_pred .= " OR (E." . db()->quote($field['name']) . "=?)";
+          $sql_params[] = $key;
+        }
+      }
+    }
+    elseif ($field['nature'] == 'character')
+    {
+      $sql_pred .= " OR (" . db()->syntax_caseless_contains("E." . db()->quote($field['name']), $search_str, $sql_params).")";
+    }
+  }
+}
+
+$sql_pred .= ')';
+
+if (isset($search_start_time))
+{
+  $sql_pred .= " AND (E.end_time > ?)";
+  $sql_params[] = $search_start_time;
+}
+
+// We only want the bookings for rooms that are visible
+$invisible_room_ids = get_invisible_room_ids();
+if (count($invisible_room_ids) > 0)
+{
+  $sql_pred .= " AND (E.room_id NOT IN (" . implode(',', $invisible_room_ids) . "))";
+}
+
+
+// If we're not an admin (they are allowed to see everything), then we need
+// to make sure we respect the privacy settings.  (We rely on the privacy fields
+// in the area table being not NULL.   If they are by some chance NULL, then no
+// entries will be found, which is at least safe from the privacy viewpoint)
+if (!is_book_admin())
+{
+  if (isset($mrbs_user))
+  {
+    // if the user is logged in they can see:
+    //   - all bookings, if private_override is set to 'public'
+    //   - their own bookings, and others' public bookings if private_override is set to 'none'
+    //   - just their own bookings, if private_override is set to 'private'
+    $sql_pred .= " AND ((A.private_override='public') OR
+                        ((A.private_override='none') AND ((E.status&" . STATUS_PRIVATE . "=0) OR (E.create_by = ?))) OR
+                        ((A.private_override='private') AND (E.create_by = ?)))";
+    $sql_params[] = $mrbs_user->username;
+    $sql_params[] = $mrbs_user->username;
+  }
+  else
+  {
+    // if the user is not logged in they can see:
+    //   - all bookings, if private_override is set to 'public'
+    //   - public bookings if private_override is set to 'none'
+    $sql_pred .= " AND ((A.private_override='public') OR
+                        ((A.private_override='none') AND (E.status&" . STATUS_PRIVATE . "=0)))";
   }
 }
 
@@ -128,13 +325,20 @@ if (($private_override != "public") && !$is_admin)
 // searches so that we don't have to run it for each page.
 if (!isset($total))
 {
-  $total = sql_query1("SELECT count(*) FROM $tbl_entry E WHERE $sql_pred");
+  $sql = "SELECT count(*)
+            FROM " . _tbl('entry') . " E
+       LEFT JOIN " . _tbl('room') . " R
+              ON E.room_id = R.id
+       LEFT JOIN " . _tbl('area') . " A
+              ON R.area_id = A.id
+           WHERE $sql_pred";
+  $total = db()->query1($sql, $sql_params);
 }
 
-if ($total <= 0)
+if (($total <= 0) && !$is_ajax)
 {
   echo "<p id=\"nothing_found\">" . get_vocab("nothing_found") . "</p>\n";
-  require_once "trailer.inc";
+  print_footer();
   exit;
 }
 
@@ -147,103 +351,86 @@ else if($search_pos >= $total)
   $search_pos = $total - ($total % $search["count"]);
 }
 
-// Now we set up the "real" query using LIMIT to just get the stuff we want.
-$sql = "SELECT E.id AS entry_id, E.create_by, E.name, E.description, E.start_time, R.area_id
-        FROM $tbl_entry E, $tbl_room R
-        WHERE $sql_pred
-        AND E.room_id = R.id
-        ORDER BY E.start_time asc "
-  . sql_syntax_limit($search["count"], $search_pos);
-
-// this is a flag to tell us not to display a "Next" link
-$result = sql_query($sql);
-if (! $result)
+// If we're Ajax capable and this is not an Ajax request then don't output
+// the table body, because that's going to be sent later in response to
+// an Ajax request - so we don't need to do the query
+if (!$ajax_capable || $is_ajax)
 {
-  fatal_error(0, sql_error());
+  // Now we set up the "real" query
+  $sql = "SELECT E.id AS entry_id, E.create_by, E.name, E.description, E.start_time,
+                 E.room_id, R.area_id, A.enable_periods
+            FROM " . _tbl('entry') . " E
+       LEFT JOIN " . _tbl('room') . " R
+              ON E.room_id = R.id
+       LEFT JOIN " . _tbl('area') . " A
+              ON R.area_id = A.id
+           WHERE $sql_pred
+        ORDER BY E.start_time asc";
+  // If it's an Ajax query we want everything.  Otherwise we use LIMIT to just get
+  // the stuff we want.
+  if (!$is_ajax)
+  {
+    $sql .= " " . db()->syntax_limit($search["count"], $search_pos);
+  }
+
+  // this is a flag to tell us not to display a "Next" link
+  $result = db()->query($sql, $sql_params);
+  $num_records = $result->count();
 }
-$num_records = sql_count($result);
 
-$has_prev = $search_pos > 0;
-$has_next = $search_pos < ($total-$search["count"]);
-
-if ($has_prev || $has_next)
+if (!$ajax_capable)
 {
-  echo "<div id=\"record_numbers\">\n";
-  echo get_vocab("records") . ($search_pos+1) . get_vocab("through") . ($search_pos+$num_records) . get_vocab("of") . $total;
-  echo "</div>\n";
-  
-  echo "<div id=\"record_nav\">\n";
-  // display a "Previous" button if necessary
-  if($has_prev)
-  {
-    echo "<a href=\"search.php?search_str=$search_url&amp;search_pos=";
-    echo max(0, $search_pos-$search["count"]);
-    echo "&amp;total=$total&amp;year=$year&amp;month=$month&amp;day=$day\">";
-  }
-
-  echo get_vocab("previous");
-
-  if ($has_prev)
-  {
-    echo "</a>";
-  }
-
-  // print a separator for Next and Previous
-  echo(" | ");
-
-  // display a "Previous" button if necessary
-  if ($has_next)
-  {
-    echo "<a href=\"search.php?search_str=$search_url&amp;search_pos=";
-    echo max(0, $search_pos+$search["count"]);
-    echo "&amp;total=$total&amp;year=$year&amp;month=$month&amp;day=$day\">";
-  }
-
-  echo get_vocab("next");
-  
-  if ($has_next)
-  {
-    echo "</a>";
-  }
-  echo "</div>\n";
+  echo generate_search_nav_html($search_pos, $total, $num_records, $search_str);
 }
-?>
 
-  <table id="search_results">
-    <thead>
-      <tr>
-        <th><?php echo get_vocab("entry") ?></th>
-        <th><?php echo get_vocab("createdby") ?></th>
-        <th><?php echo get_vocab("namebooker") ?></th>
-        <th><?php echo get_vocab("description") ?></th>
-        <th><?php echo get_vocab("start_date") ?></th>
-      </tr>
-    </thead>
-    
-    <tbody>
-<?php
-for ($i = 0; ($row = sql_row_keyed($result, $i)); $i++)
+if (!$is_ajax)
 {
+  echo "<div id=\"search_output\" class=\"datatable_container\">\n";
+  echo "<table id=\"search_results\" class=\"admin_table display\"";
+
+  // Put the search parameters as data attributes so that the JavaScript can use them
+  echo ' data-search_str="' . htmlspecialchars($search_str) . '"';
+  if (isset($from_date))
+  {
+    echo ' data-from_date="' . htmlspecialchars($from_date) . '"';
+  }
+
+  echo ">\n";
+  echo "<thead>\n";
   echo "<tr>\n";
-  echo "<td><a href=\"view_entry.php?id=".$row['entry_id']."\">".get_vocab("view")."</a></td>\n";
-  echo "<td>" . htmlspecialchars($row['create_by']) . "</td>\n";
-  echo "<td>" . htmlspecialchars($row['name']) . "</td>\n";
-  echo "<td>" . htmlspecialchars($row['description']) . "</td>\n";
-  // generate a link to the day.php
-  $link = getdate($row['start_time']);
-  echo "<td><a href=\"day.php?day=$link[mday]&amp;month=$link[mon]&amp;year=$link[year]&amp;area=".$row['area_id']."\">";
-  if(empty($enable_periods))
-  {
-    $link_str = time_date_string($row['start_time']);
-  }
-  else
-  {
-    list(,$link_str) = period_date_string($row['start_time']);
-  }
-  echo "$link_str</a></td>";
+  // We give some columns a type data value so that the JavaScript knows how to sort them
+  echo "<th>" . get_vocab("namebooker") . "</th>\n";
+  echo "<th>" . get_vocab("createdby") . "</th>\n";
+  echo "<th><span class=\"normal\" data-type=\"title-numeric\">" . get_vocab("start_date") . "</span></th>\n";
+  echo "<th>" . get_vocab("description") . "</th>\n";
   echo "</tr>\n";
+  echo "</thead>\n";
+  echo "<tbody>\n";
 }
-echo "</tbody>\n";
-echo "</table>\n";
-require_once "trailer.inc";
-?>
+
+// If we're Ajax capable and this is not an Ajax request then don't output
+// the table body, because that's going to be sent later in response to
+// an Ajax request
+if (!$ajax_capable || $is_ajax)
+{
+  $returl = this_page() . "?search_str=$search_str&from_date=$from_date";
+
+  while (false !== ($row = $result->next_row_keyed()))
+  {
+    output_row($row, $returl);
+  }
+}
+
+if ($is_ajax)
+{
+  http_headers(array("Content-Type: application/json"));
+  echo json_encode($json_data);
+}
+else
+{
+  echo "</tbody>\n";
+  echo "</table>\n";
+  echo "</div>\n";
+  print_footer();
+}
+

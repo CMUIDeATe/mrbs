@@ -1,7 +1,5 @@
 #!/usr/bin/perl
 
-# $Id: crypt_passwd.pl 798 2008-04-13 19:59:24Z jberanek $
-
 # Authentication script to use with MRBS's "ext" authentication
 # scheme. config.inc.php should include something like:
 #
@@ -51,7 +49,7 @@ while (<PASSWD>)
       if (crypt($password, $crypt) eq $crypt)
       {
         $retcode = 0;
-	last;
+        last;
       }
       else
       {

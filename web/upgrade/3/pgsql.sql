@@ -1,4 +1,3 @@
--- $Id: pgsql.sql 1117 2009-06-17 14:48:40Z cimorrison $
 -- Run this script to upgrade postgres or mysql mrbs database
 
 -- Add an extra column to the mrbs_entry and mrbs_repeat table 

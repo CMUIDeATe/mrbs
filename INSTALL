@@ -4,112 +4,123 @@
 
 REQUIREMENTS
 ---------------------------------------------------------------------------
-MRBS works with both MySQL and PostgreSQL 6.5 to 7.2 database systems. You must
-have PHP with support for your chosen database system installed and working
-for this application. See the PHP (www.php.net), MySQL (www.mysql.com), and
-PostgreSQL (www.postgresql.org) sites for more info on setting these up.
-You need to know how to install, secure, run, maintain, and back up your
-chosen database system.
+MRBS works with both MySQL (Version 5.5.3 and above, though MySQL Version
+5.7.5 and above or MariaDB Version 10.0.2 and above are recommended) and
+PostgreSQL (Version 8.2 and above) systems.  [The reason that if you are using
+MySQL you are recommended to use MySQL Version 5.7.5 and above or MariaDB
+Version 10.0.2 and above is that these versions support multiple locks and thus
+enable MRBS to use a custom database session handler.  This is more secure than
+the standard file based session handler, easier to configure and enables MRBS
+to be used on clustered web servers.]
 
-No optional PHP packages (other than the database system) are required for
-this application. This version of MRBS was tested with PHP 4.3.2 and
-somewhat with PHP 5.1.2. Older versions of PHP 4 may work, but PHP 3 is
-unsupported.
+You must have at least PHP 7.2, with support for your chosen database system
+installed and working for this application. See the PHP (www.php.net), MySQL
+(www.mysql.com), and PostgreSQL (www.postgresql.org) sites for more info on
+setting these up.   You need to know how to install, secure, run, maintain,
+and back up your chosen database system.
 
-You can run PHP either as a CGI or with a direct module interface (also called 
-SAPI). These servers include Apache, Microsoft Internet Information Server, 
-Netscape and iPlanet servers. Many other servers have support for ISAPI, the 
+MRBS also requires that 'iconv' PHP extension, to provide
+internationalisation.
+
+You can run PHP either as a CGI or with a direct module interface (also called
+SAPI). These servers include Apache, Microsoft Internet Information Server,
+Netscape and iPlanet servers. Many other servers have support for ISAPI, the
 Microsoft module interface.
-You'll get better performance with PHP setup as a module.  Not only will you 
+You'll get better performance with PHP setup as a module.  Not only will you
 not have to deal with the CGI performance hit, but you'll be able to use PHP's
 database connection pooling. However, be careful that you don't exceed
 the maximum number of connections allowed to your database; with connection
 pooling PHP/Apache can potentially create a connection from each Apache
-child server to the database. 
-Also many mrbs authentication schemes use basic http authentication. These 
+child server to the database.
+Also many MRBS authentication schemes use basic HTTP authentication. These
 don't work if you run PHP as a CGI.
 
 If you are using PHP as an Apache module, you probably want to ensure that
 the Apache MaxRequestsPerChild is not set to 0, in case of undetected memory
 leaks in PHP or MRBS.
 
-If you use MySQL, versions 3.22.32, 3.23.23, 3.23.53, 4.0.13, 4.0.14 and
-5.0.18 have been tested and reported to work.
+OVERVIEW
+---------------------------------------------------------------------------
+The steps involved in installing MRBS are:
 
-If you use PostgreSQL, you will need at least version 7.0, versions 7.0.3
-and 8.1.4 has been tested and reported to work.
+1.  Installing the MRBS files on your web server
+2.  Creating the MRBS tables in your database
+3.  Configuring MRBS
 
-FILE UNPACKING
+After that you can then point your browser at MRBS and start creating areas
+and rooms.
+
+
+INSTALLING THE MRBS FILES
 ---------------------------------------------------------------------------
 To install MRBS, just unpack the distribution into a temporary directory,
 then copy the files in the "web" subdirectory into a new directory somewhere
 your web server can find them.
 
-For example:
+If you are using a remote webserver, unpack the files into a temporary
+directory on your local machine and then upload them to suitable directory
+on your webserver, for example mydomain.com/mrbs
+
+If you are using a Unix/Linux webserver to which you have access, then
+an example of the installation might be:
 
 Unpack the software into a new temporary directory, something like this:
-    $ tar -xvzf ~/download/mrbs-1.0.tgz       (or whatever version)
-    $ cd mrbs-1.0                             (or whatever version)
+    $ tar -xvzf ~/download/mrbs-1.7.1.tgz       (or whatever version)
+    $ cd mrbs-1.7.1                             (or whatever version)
 
-If you are upgrading from a previous version of MRBS, you should save your
-"config.inc.php" file so you can compare and update the new file with your
-site-specific changes. Then rename your existing MRBS web server directory.
-For example:
-    $ cp /var/lib/apache/htdocs/mrbs/config.inc.php config.site.inc
-    $ mv /var/lib/apache/htdocs/mrbs /var/lib/apache/htdocs/mrbs.old
+MRBS comes with a sample configuration file "web/config.inc.php-sample" -
+this should be copied to "web/config.inc.php" and configured for your
+site. The minimum you generally need to configure are the timezone
+(unless your PHP configuration already defines the timezone) and the
+database access details.
+
+If you are upgrading from a previous version of MRBS, you should consider
+copying your changes to the "config.inc.php" file into a new copy
+of config.inc.php copied from the new MRBS version's config.inc.php-sample.
 
 Now install MRBS by copying the contents of the "web" subdirectory of the
 distribution somewhere your web server can find it.  For example:
     $ cp -r web /var/lib/apache/htdocs/mrbs
 
-DATABASE SETUP
----------------------------------------------------------------------------
-If you are upgrading from MRBS version 0.7 or later, and continuing to
-use MySQL, your database is already set up, so you can skip to the
-Application Setup section.
 
+CREATING THE MRBS TABLES IN YOUR DATABASE
+---------------------------------------------------------------------------
 For a new install:
 
-You can place the MRBS database tables in an existing database or
-create a new database with the following:
+If you are using a remote webserver you should use your database
+administration program (eg phpMyAdmin in your control panel) to create the
+MRBS tables, by executing the contents of tables.my.sql.   For example, if
+you are using phpMyAdmin copy the contents of tables.my.sql into the SQL
+tab of phpMyAdmin and execute it as an SQL query.   This assumes that you
+have already created a database - if not you should create a database
+first.
+
+If you are using a Unix/Linux webserver to which you have access, then the
+procedure might be:
 
 [MySQL]         $ mysqladmin create mrbs
-[PostgreSQL]    $ createdb mrbs
+[PostgreSQL]    $ createdb -E UTF8 -T template0 mrbs
 
 (This will create a database named "mrbs", but you can use any name.)
 
 Create the MRBS tables using the supplied tables.*.sql file:
 
-[MySQL]         $ mysql mrbs < tables.my.sql
-[PostgreSQL]    $ psql -a -f tables.pg.sql mrbs
+[MySQL]             $ mysql mrbs < tables.my.sql
+[PostgreSQL]        $ psql -a -f tables.pg.sql mrbs
 
 where "mrbs" is the name of your database (mentioned above).
 This will create all the needed tables.
 You may need to set rights on the tables; for PostgreSQL see "grant.pg.sql".
-If you use a PHP version less than 4.2, you will also need to replace the pgsql
-driver file pgsql.inc with pgsql.before_php42.inc, and rename it to pgsql.inc.
 If you need to delete the tables, for PostgreSQL see "destroy.pg.sql".
 
-The tables are now empty and ready for use. If you want to add a few sample
-areas and rooms without going through the Admin function, use this script:
-
-[MySQL]         $ mysql mrbs < sample-data.sql
-[PostgreSQL]    $ psql -a -f sample-data.sql mrbs
-
-Substitute the database name you used for "mrbs".
-This script is only for use in a newly initialized database! (It will not
-work properly in a database where the ID counters are greater than 0.)
-Also see the description of testdata.php in the README file.
+The tables are now empty and ready for use.
 
 For an upgrade:
 
-The database format changed slightly between 0.6 and 0.7. To change the
-format of your data do:
-
-[MySQL]         $ mysql mrbs < upgrade.my.sql
-
-(This does not apply to PostgreSQL, which was not supported then.)
-Also see the file UPGRADE in the distribution.
+If you are upgrading from MRBS 1.2-pre3 or later, your database will be
+upgraded automatically if necessary when you first run MRBS.   You will
+be prompted for a database (not MRBS) username and password with rights
+to create and alter tables.     Otherwise, please see the UPGRADE file.
 
 For a second installation or to use different table names:
 
@@ -120,10 +131,10 @@ prefix for the table names.
 In tables.*.sql you will need to change the table names and then follow
 the instructions above for creating the tables in your database.
 
-When editting config.inc.php, you need to change the table name prefix
+When editing config.inc.php, you need to change the table name prefix
 from "mrbs_" to the value you chose using the variable $db_tbl_prefix.
 
-WARNING: All of the .sql files are setup to use the 'mrbs_' prefix
+WARNING: All of the .sql files are set up to use the 'mrbs_' prefix
          therefore you will have to edit them before you use them if you
          change the prefix for your tables.
 
@@ -136,24 +147,246 @@ You can clean out old entries from your database using the supplied SQL
 scripts purge.my.sql (for MySQL) and purge.pg.sql (for PostgreSQL). Read
 the comments at the top of the scripts before using them.
 
-APPLICATION SETUP
+
+ADDING EXTRA COLUMNS TO THE DATABASE TABLES
 ---------------------------------------------------------------------------
-Next, you will need to customize the file "config.inc.php"...
+It is possible to add extra columns to the entry, repeat, room and users
+tables, if you need to hold extra information about bookings, rooms and users.
+For example you might want to add a column in the room table to record whether
+or not a room has a coffee machine and you might want to record the phone
+numbers of users. (Note that the users table is only used if you are using
+the 'db' authentication scheme).   Similarly you might want to add a field
+to the entry and repeat tables to record the number of participants for
+a meeting.
 
-If you are upgrading from a previous version of MRBS, use your saved
-copy of "config.inc.php" as a reference. Do not just use your old config.inc.php
-file, however, because there changes and new settings.
+To add extra columns, just go into your database administration tool, eg
+phpMyAdmin, and add the extra columns manually.   MRBS will then recognise them
+and handle them automatically, displaying the information in the lists of rooms
+and users and allowing you to edit the data in the appropriate forms.
 
-Refer to the comments in the supplied config.inc.php file for more details.
-The following sections can be configured:
+NOTES:
+(1) if you are adding a field to the entry table you must add an
+identical field to the repeat table.   If you do not MRBS will fail with
+a fatal error when you try and run it.
+(2) names must consist of letters, numbers or underscores.  If you are
+using PostgreSQL then the name must begin with a letter or an underscore.
+If you are using MySQL then there is no restriction on the first character
+as long as it is in the permitted set, ie a letter, number or underscore.
+(Although MySQL will allow other characters in column names, MRBS imposes
+restrictions on the characters allowed in order to simplify the code. For
+a technical explanation see below).
+
+At the moment only text, varchar, date (user table only), decimal/numeric,
+int, smallint and tinyint columns are  supported, displayed as textarea, text,
+date, number or checkbox fields as appropriate.  Whether a varchar is displayed
+as a text or textarea input depends on its maximum length, with the breakpoint
+determined by a configuration variable. Ints are treated as integer types, as
+you would expect.   However smallints and tinyints are assumed to be booleans
+and are displayed as checkboxes.
+
+[Note:  smallints are assumed to be booleans because the boolean type in
+PostgreSQL presents some problems in PHP when trying to process the results
+of a query in a database independent way, so it is more convenient to use a
+smallint instead of a boolean in PostgreSQL.]
+
+Text descriptions are set in the config file using the $vocab_override variable
+using the appropriate language(s) and with the tag room.column_name,
+eg room.coffee_machine, or users.phone enabling translations to be provided.
+If not present, the column name will be used for labels etc.  If you are adding
+columns to the entry and repeat tables then you only need to add the
+entry.column_name tags:  you don't need to add a repeat.column_name tag.
+
+As an example, to add a field to the room table recording whether or not
+there is a coffee machine you would, in MySQL, add the column
+
+coffee_machine     tinyint
+
+to the room table and add the line
+
+$vocab_override['en']['room.coffee_machine'] = "Coffee machine";
+
+to the config file and similarly for other languages as required.   MRBS
+should then do the rest and display your coffee machine field on the room
+pages.
+
+Extra options for custom fields:
+
+1)
+
+You can create dropdown boxes for a custom field by defining an
+entry in the configuration array $select_options. For example:
+
+$select_options['entry.conference_facilities'] = array('Video',
+                                                       'Telephone',
+                                                       'None');
+
+would define the 'conference_facilities' custom field to have three
+possible values.
+
+For custom fields only (will be extended later) it is also possible to use
+an associative array for $select_options, for example
+
+$select_options['entry.catering'] = array('c' => 'Coffee',
+                                          's' => 'Sandwiches',
+                                          'h' => 'Hot Lunch');
+
+In this case the key (eg 'c') is stored in the database, but the value
+(eg 'Coffee') is displayed and can be searched for using Search and Report.
+This allows you to alter the displayed values, for example changing 'Coffee'
+to 'Coffee, Tea and Biscuits', without having to alter the database.   It can also
+be useful if the database table is being shared with another application.
+MRBS will auto-detect whether the array is associative.
+
+2)
+
+You can specify that a field is mandatory. This will ensure that the
+user specifies a value for a field that may be empty, like a text box
+or a selection, as in 1) above. For example:
+
+$is_mandatory_field['entry.conference_facilities'] = true;
+
+would define the 'conference_facilities' custom field to be mandatory.
+In the case of a select field, this adds an empty value to the dropdown
+list.
+
+Making a checkbox field mandatory is possible and requires the
+checkbox to be ticked before the form can be submitted.   This can be
+useful for example for requiring users to accept terms of service or
+terms and conditions.
+
+3)
+
+You can also specify that a field is private, ensuring that the contents
+are only visible to yourself and the administrators.   For example:
+
+$is_private_field['entry.refreshments'] = true;
+$is_private_field['users.tel'] = true;
+
+would prevent the details of your refreshments being visible to other
+users - provided that private bookings are enabled.   See the section
+on private bookings in systemdefaults.inc.php for more information.
+Note that private fields are only supported in the entry and users tables.
+
+4)
+
+You can also enter regular expressions for validating text field input using
+the pattern attribute.  At the moment this is limited to custom fields in the
+users table.  For example the following could be used to ensure a valid US ZIP
+code (you might want to have a better regex - this is just for illustration):
+
+$pattern['users.zip_code'] = "^[0-9]{5}(?:-[0-9]{4})?$";
+
+You would probably also want to enter a custom error message by using
+$vocab_override, with the tag consisting of "table.field.oninvalid" eg
+
+$vocab_override['users.zip_code.oninvalid']['en'] = "Please enter a valid " .
+  "ZIP code, eg '12345' or '12345-6789'";
 
 
-1. Database Settings:
+Technical explanation of the restriction on column names for custom fields
+--------------------------------------------------------------------------
+// Column names for custom fields are used by MRBS in a number of ways:
+// - as the column name in the database
+// - as part of an HTML name attribute for a form input
+// - as part of a PHP variable name
+//
+// MySQL, PostgreSQL, HTML and PHP all have different rules for these tokens:
+// - MySQL: almost anything is allowed except that:
+//       - "No identifier can contain ASCII NUL (0x00) or a byte with a value
+//         of 255."
+//       - "Database, table, and column names should not end with space
+//         characters."
+//   (http://dev.mysql.com/doc/refman/5.0/en/identifiers.html)
+//
+// - PostgreSQL:  "SQL identifiers and key words must begin with a letter (a-z,
+//   but also letters with diacritical marks and non-Latin letters) or an
+//   underscore (_).   Subsequent characters in an identifier or key word can
+//   be letters, underscores, digits (0-9), or dollar signs ($). Note that
+//   dollar signs are not allowed in identifiers according to the letter of the
+//   SQL standard, so their use may render applications less portable. The SQL
+//   standard will not define a key word that contains digits or starts or ends
+//   with an underscore, so identifiers of this form are safe against possible
+//   conflict with future extensions of the standard."
+//   (http://www.postgresql.org/docs/8.1/interactive/sql-syntax.html#SQL-SYNTAX-IDENTIFIERS)
+//
+// - PHP:  "Variable names follow the same rules as other labels in PHP. A
+//   valid variable name starts with a letter or underscore, followed by any
+//   number of letters, numbers, or underscores. As a regular expression, it
+//   would be expressed thus: '[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*' "
+//   (http://php.net/manual/en/language.variables.basics.php)
+//
+// - HTML: "ID and NAME tokens must begin with a letter ([A-Za-z]) and may be
+//   followed by any number of letters, digits ([0-9]), hyphens ("-"),
+//   underscores ("_"), colons (":"), and periods (".")."
+//   (http://www.w3.org/TR/html401/types.html#type-cdata)
+//
+// In order to avoid complications with using names in each of these contexts,
+// we restrict custom field names to the set of names which conforms to all
+// four rules, taking into account the fact that when MRBS uses column names
+// in PHP and HTML it always prefixes them with a string beginning with a letter.
+// This gives us the rule that custom field names must consist of letters,
+// numbers or underscores.
+
+
+CONFIGURING MRBS
+---------------------------------------------------------------------------
+Next, you will need to create and customize the file "config.inc.php"...
+
+First of all copy the file config.inc.php-sample to config.inc.php.  Then you
+need to edit the settings in that file and add other settings as required.
+
+As a minimum you will need to set the timezone and the database variables.
+Other settings can be changed by copying lines from systemdefaults.inc.php and
+areadefaults.inc.php and pasting them into config.inc.php.   Do not edit
+systemdefaults.inc.php or areadefaults.inc.php as it will make it harder for
+you to upgrade when new versions are released.
+
+Note that there are two different defaults files (systemdefaults.inc.php and
+areadefaults.inc.php) to draw attention to the fact that the settings in
+areadefaults just determine the settings for NEW areas.   Settings for existing
+areas are set using a web browser by following the "Rooms" link in MRBS.  (It
+can be a little frustrating editing the area settings to find that they have no
+effect on existing areas!)
+
+1.  Timezone
+
+You must set the timezone to a valid value, a list of which can be found at
+http://php.net/manual/timezones.php.   Don't forget to uncomment the line
+by removing the '//' at the beginning.   Note that the timezone to use is the
+timezone in which your meeting rooms are located, not the timezone of your
+server in case they are different.
+
+However, if you already have bookings in your system which were made under
+a different timezone (perhaps if you are upgrading from a previous version
+of MRBS where the timezone wasn't set explicitly and the timezone defaulted to
+that of the server) then you have two choices:
+
+(a) to set the timezone to be the same as the previous timezone.   This will
+ensure that all your existing bookings still appear correctly, but you will
+have to continue to put up with some minor inconveniences.   For example
+"Go to Today" will not always go to the today for your rooms, if you happen
+to be using MRBS at a time of day when the rooms are on one day but the
+timezone you have selected is on the day before or after.   Also if you are
+using the min and max book ahead facility then you will find that this is out
+by the difference between the timezone of your rooms and the timezone you have
+chosen.
+
+(b) to set the timezone to the timezone of your rooms, having first corrected
+the start and end times of all your existing bookings, in both the entry and
+repeat tables.   This is not a trivial exercise and you should back up your
+database before starting.   Note also that it is not necessarily as simple as
+adding or subtracting a fixed number of hours to existing bookings since the
+dates at which your rooms change between summer and winter time may be different
+to the dates at which your previous timezone made the DST change.   This can
+happen for example if your rooms are in Europe and your server is in the USA,
+as there is usually a week when Europe has changed but the USA has not.
+
+
+2.  Database Settings:
 
 First, select your database system. Define one of the following:
 
     $dbsys = "mysql";
-    $dbsys = "mysqli";
     $dbsys = "pgsql";
 
 Then define your database connection parameters. Set the values for:
@@ -163,18 +396,19 @@ Then define your database connection parameters. Set the values for:
     $db_login =     The database login username
     $db_password =  The database login password for the above login username
 
-If the database server and web server are the same machine, use 
+If the database server and web server are the same machine, use
 $db_host="localhost". Or, with PostgreSQL only, you can use $db_host="" to
 use Unix Domain Sockets to connect to the database server on the same machine.
 
-By default, MRBS will use PHP persistent (pooled) database connections,
-for better performance. Depending on your web server and database server
-configuration, it is possible that this will cause MRBS to reach the maximum
-number of connections allowed to your database, since each Apache child
-process may keep a connection open. Then, users will randomly get errors
-when trying connecting to MRBS.  If you would rather use non-persistent
-database connections, uncomment the line in "config.inc.php" which sets the
-$db_nopersist variable.
+By default, MRBS will not use PHP persistent (pooled) database connections.
+Persistent connections can sometimes give better performance, but they can
+also cause problems with transactions and locks.  For more details see
+http://php.net/manual/en/features.persistent-connections.php   Although
+MRBS is designed to work with persistent connections we recommend that you
+don't use them unless they give a significant performance boost.  To use
+persistent connections set
+
+    $db_persist = TRUE;
 
 If you want to install multiple sets of mrbs tables when only one
 SQL database is available, or resolve table name conflicts, you have
@@ -184,415 +418,103 @@ then you will need to set the value of:
     $db_tbl_prefix = The table name prefix
 
 
-2. Site Identification:
+3.  Other Settings
 
-Specify your company or site name, and contact information. The company name
-is displayed at the top of each page, and the contact information is
-displayed in the help file.
+Now go through systemdefaults.inc.php and areadefaults.inc.php and see which other
+configuration settings you would like to change.   Do this by copying them to
+config.inc.php and changing them there.   This should make the task of upgrading to
+new releases easier as all your site-specific configuration changes will be confined
+to config.inc.php.
 
-    $mrbs_admin = "Your Administrator";
-    $mrbs_admin_email = "admin_email@your.org";
-    $mrbs_company = "Your Company";
+There is a wide variety of settings that can be changed, including
 
-Alternately, if you want to display your organization logo, replace the 
-$mrbs_company line like this :
+- site identification information
+- themes
+- calendar settings
+- booking policies
+- display and time format settings
+- private bookings settings
+- provisional bookings settings
+- authentication settings
+- email settings
+- language settings
+- report settings
+- entry types
 
-$mrbs_company = "<a href=http://www.your_organization.com/><img src=your_logo.gif border=0></a>";
+The comments in the systemdefaults.inc.php and areadefaults.inc.php files should
+explain the purpose of the various configuration variables and how to change them.
+(Note that some of the settings can be set on a per-area basis through the area
+administration page in MRBS.   In this case the setting in the areadefaults.inc.php
+and config.inc.php files defines the default settings for new areas.)
 
-$url_base = "";
+The Help information is held in the site_faq files, one per language.  You may well
+want to customise it by editing the files.
 
-This is to fix URL problems when using a proxy in the environment
-If links inside MRBS appear broken, then specify here the URL of
-your MRBS root directory, as seen by the users. For example:
 
-$url_base =  "http://webtools.uab.ericsson.se/oam";
+CHANGING TEXT STRINGS
+---------------------------------------------------------------------------
 
-It is also recommended that you set this if you intend to use email
-notifications, to ensure that the correct URL is displayed in the
-notification.
+All the text strings used by MRBS, except those used on the Help page, are held in a
+series of lang.* files, for example lang.en for English, or lang.fr for French.   They
+are overridden by the $vocab_override array in the config file.  If you want to change
+some of the text strings used by MRBS, for example change "Room" to "Computer", then
+look for the appropriate string in the lang files, remember its tag and set the
+$vocab_override variable in the config file.    For example
 
+$vocab_override['en']['ctrl_click'] = "Use Control-Click to select more than one computer";
 
-3. Calendar Settings:
+Doing it this way, rather than editing the lang files, will mean that when you upgrade to
+the next version of MRBS you will not have to re-edit the lang files.
 
-There are two options here:
-- regular consecutive booking periods (default)
-  for example: every half hour period from 7 AM to 7 PM can be booked
-- user-defined periods
-  for example: school periods where periods are of different lengths
-  and are not consecutive because of change-over time or breaks.
 
-It is not possible to swap between these two options once bookings have
-been created and to have meaningful entries.  This is due to differences
-in the way that the data is stored.
+INTERNATIONALISATION
+---------------------------------------------------------------------------
 
-The settings for each option are described below:
+From MRBS 1.4.6, MRBS is internationalised and uses UTF-8 throughout.
+MRBS will serve all of its pages in UTF-8 and stores everything in the
+database in UTF-8. This means that all languages work together.
 
-    a) Regular Consecutive periods
-    Specify the resolution in minutes. MRBS will display blocks of this size,
-    and will round up all entries to an even multiple of this many minutes.
-    Specify a number which divides evenly into hours, for example one of:
+For MRBS to use Unicode, PHP must be built with 'iconv' support
+('--with-iconv' directive), or have the iconv extension installed
+and enabled. On Windows, if you are using PHP 5, iconv support is built-in.
 
-        $resolution =  900;   # 15 minutes
-        $resolution = 1800;   # Half hour
-        $resolution = 3600;   # Whole hours
 
-    Specify the start and end of the day in 24 hour notation, using whole
-    hours.
+PERIODS
+---------------------------------------------------------------------------
+When using periods, MRBS stores bookings internally as one minute slots
+starting at 1200.    If once you have had your system up and running for
+a while find that you need to add a new period then you will need to
+adjust the times of your existing bookings unless your new period is at
+the end of the day.
 
-        $morningstarts = 7;   # First block is 7 AM.
-        $eveningends = 19;    # Last block starts at 7 PM.
+The simplest example is when you want to add a new period at the start of
+the day.   In this case you will need to run some SQL using phpMyAdmin or
+a similar program to move all bookings one minute later.  In this example
+the SQL required would be
 
-    For additional control there are $morningstarts_minutes and
-    $eveningends_minutes.
+UPDATE mrbs_entry SET start_time=start_time+60, end_time=end_time+60;
+UPDATE mrbs_repeat SET start_time=start_time+60, end_time=end_time+60,
+end_date=end_date+60;
 
-    $morningstarts_minutes gives you more control over the starting block
-    displayed for each day.  For example, to start a day at
-    8:30 am:
+having changed "mrbs_" to your table prefix if necessary.
 
-        $morningstarts = 8;
-        $morningstarts_minutes = 30;
+Before running this SQL you should of course backup your database.
 
-    $eveningends_minutes gives you more control over the last block displayed
-    for each day. For example, to display full 24 hour days with 30 minute
-    intervals:
 
-        $resolution = 1800;
-        $morningstarts = 0;
-        $eveningends = 23;
-        $eveningends_minutes = 30;
+MULTISITE
+---------------------------------------------------------------------------
+MRBS can be run in multisite mode by setting in the config file
 
-    Note: Be careful to avoid specifying options that display blocks
-    overlaping the next day, since it is not properly handled.
+$multisite = true;
 
-    b) User-defined periods
-    To enable this option set
-        $enable_periods = TRUE;
+In multisite mode a single instance of the MRBS code can serve a number of
+sites. Each site has its own config file in the sites/<sitename> directory
+which will override any settings in the global config file.  At a minimum
+the local config file will contain a table prefix for the site, but can also
+contain any other config settings including a theme and custom CSS.
 
-    Then define the names of the periods that you wish to use in chronological
-    order.  This is a free-form field and can contain anything, such as a
-    descriptive name for the period or the start and end time.
-
-    For example:
-        $periods[] = "Period&nbsp;1";
-        $periods[] = "Period&nbsp;2";
-        ...
-    or
-        $periods[] = "09:15&nbsp;-&nbsp;09:50";
-        $periods[] = "09:55&nbsp;-&nbsp;10:35";
-        ...
-
-    &nbsp; is used to ensure that the name or description is not wrapped
-    when the browser determines the column widths to use in day and week
-    views.
-
-    A maximum of 60 periods may be defined.
-
-    Note:
-    1) Changing the number of periods after bookings have been entered may
-    lead to incorrect reservations being displayed where the booking does not
-    end on the day that it starts.
-    2) The periods bear no relation to clock time during a day.
-
-
-To control international preferences for the calendar displays, 
-
-- use $weekstarts to change the first day of the week from the default of
-Sunday; 
-- use $dateformat to show dates as "Month Day" or "Day Month"
-in the page footers;
-- use $twentyfourhour_format to show dates in 12 or 24 hour
-format.
-
-
-4. Miscellaneous Settings:
-
-These settings control:
-
-- the maximum number of repeat entries which can be created at once (a safety
-  feature),
-- the default report time period,
-- the number of search results to return per page,
-- the page refresh rate,
-- the way area/rooms are selected (html list or a drop-down select box),
-- the way entries are displayed in monthly view (start/end slot, brief
-  description or both),
-- the way weeks are displayed in the bottom of the page (as week numbers (ie.
-  42) instead of 'first day of the week' (13 Oct)),
-- display of times on right and left side in day and week view,
-- display of horizontal stripes on the day view,
-- cells highlighting options,
-- the default starting view (month, week or day),
-- the default room to start with.
-
-
-5. Authentication:
-
-Read the file AUTHENTICATION for information about this section. By default, 
-config.inc.php uses "php" session management and "config" authentication 
-method, allowing only demo users to book rooms, and "administrator" is defined 
-to administer the system. Demo users are "alice" and "bob" (passwords "a" and 
-"b") and "administrator" (password 'secret') is administrator.
-
-
-6. Email support:
-
-MRBS can send emails to various recipients and in accordance with events.
-
-There are four recipients types:
-
-- MRBS administrator
-- Area administrators
-- Room administrators
-- Bookers
-
-With settings described below, you can decide that MRBS sends emails to all
-these recipients, or any combination of them. Each one can be selected
-individually. Note that the word 'administrator' is used here only for mail
-purposes, it is not related to any approval workflow.
-
-There are three events types:
-
-- entry creation
-- entry change
-- entry deletion
-
-As for recipients, you can choose to send mails for any of these three events.
-
-There are many other settings, including mail transport agent (php mail, smtp
-server, unix sendmail), content of the mail subject and body, either a link to
-the entries or full description (with changes between edited entry and its
-previous state). Read the following parameters for detailed informations:
-
-MAIL_ADMIN_ON_BOOKINGS
-
-Set to TRUE if you want to be notified when entries are booked. Default is
-FALSE
-
-MAIL_AREA_ADMIN_ON_BOOKINGS
-
-Set to TRUE if you want AREA ADMIN to be notified when entries are booked.
-Default is FALSE. Area admin emails are set in room_area admin page.
-
-MAIL_ROOM_ADMIN_ON_BOOKINGS
-
-Set to TRUE if you want ROOM ADMIN to be notified when entries are booked.
-Default is FALSE. Room admin emails are set in room_area admin page.
-
-MAIL_ADMIN_ON_DELETE
-
-Set to TRUE if you want ADMIN to be notified when entries are deleted. Email
-will be sent to mrbs admin, area admin and room admin as per above settings,
-as well as to booker if MAIL_BOOKER is TRUE (see below).
-
-MAIL_ADMIN_ALL
-
-Set to TRUE if you want to be notified on every change (i.e, on new entries)
-but also each time they are edited. Edited entries will display the modified
-fields in brackets after the new value if MAIL_DETAILS is set to TRUE
-(see below). Default is FALSE (only new entries).
-
-MAIL_DETAILS
-
-Set to TRUE is you want to show entry details in email, otherwise only a
-link to view_entry is provided. Irrelevant for deleted entries, as email body
-will always have entry details, since there is no possibility to provide a
-link. Default is FALSE.
-
-MAIL_BOOKER
-
-Set to TRUE if you want the entry booker to receive a copy of his entry as
-well as any future changes (depends of MAIL_ADMIN_ALL, see below). Default
-is FALSE. MRBS can turn some of your user databases to advantage, as there
-are several authentication schemes where the username is the same as
-the email address username .For example, if your mrbs users come from an
-ldap directory and mrbs use this authentication scheme, it is likely your
-organisation emails addresses will use this username with '@domain'. If
-this is the case, you just have to set MAIL_BOOKER to TRUE and provide your
-domain below. This setting is available too if you use MRBS own user
-database (auth_db).
-
-MAIL_DOMAIN
-
-If MAIL_BOOKER is set to TRUE (see above) and you use an authentication
-scheme other than 'auth_db', you need to provide the mail domain that will
-be appended to the username to produce a valid email address (ie.
-"@domain.com").
-
-MAIL_USERNAME_SUFFIX
-
-If you use MAIL_DOMAIN above and username returned by mrbs contains extra
-strings appended like domain name ('username.domain'), you need to provide
-this extra string here so that it will be removed from the username.
-
-MAIL_ADMIN_BACKEND
-
-Set the name of the backend to use to transport your mails. Either "mail",
-"smtp" or "sendmail":
-
-·   mail
-Sends a mail using PHPs build-in mail()-function. This means this function
-must not be disabled and you have a minimal control over your server and
-settings in php.ini :
-    'SMTP' and 'smtp_port' for Windows and 'sendmail_from' and 'sendmail_path'
-    for Unix
-
-·   sendmail
-Sends a mail using a sendmail unix program.
-
-·   smtp
-Sends a mail connecting directly to an smtp server.
-
-# Sendmail settings
-
-SENDMAIL_PATH
-
-Set the path of the Sendmail program (only used with "sendmail" backend).
-Default is "/usr/bin/sendmail"
-
-SENDMAIL_ARGS
-
-Set additional Sendmail parameters (only used with "sendmail" backend).
-(example "-t -i"). Default is ""
-
-# SMTP settings
-
-SMTP_HOST
-
-Set smtp server to connect. Default is 'localhost' (only used with "smtp"
-backend).
-
-SMTP_PORT
-
-Set smtp port to connect. Default is '25' (only used with "smtp" backend).
-
-SMTP_AUTH
-
-Set whether or not to use SMTP authentication. Default is 'FALSE'
-
-SMTP_USERNAME
-
-Set the username to use for SMTP authentication. Use only if SMTP_AUTH is
-set to TRUE. Default is ''
-
-SMTP_PASSWORD
-
-Set the password to use for SMTP authentication. Use only if SMTP_AUTH is
-set to TRUE. Default is ''
-
-# Miscellaneous settings
-
-MAIL_ADMIN_LANG
-
-Set the language used for emails (chooses from an available lang.* file).
-Default is 'en'.
-
-MAIL_FROM
-
-Set the email address of the From field. Default is the $mrbs_admin_email
-variable.
-
-MAIL_RECIPIENTS
-
-Set the recipient email. Default is $mrbs_admin_email. You can define
-more than one recipient like this "john@doe.com,scott@tiger.com"
-
-MAIL_CC
-
-Set email address of the Carbon Copy field. Default is ''. You can define
-more than one recipient (see MAIL_RECIPIENTS)
-
-$mail["subject"]
-
-Set the content of the Subject field. Default is
-"Entry added/changed for $mrbs_company MRBS"
-
-$mail["subject_delete"]
-
-Set the content of the Subject field for deleted fields. Default is
-"Entry deleted for $mrbs_company MRBS";
-
-$mail["new_entry"]
-
-Set the content of the message when a new entry is booked. What you type
-here will be added at the top of the message body. Default is:
-"A new entry has been booked, here are the details:"
-
-$mail["changed_entry"]
-
-Set the content of the message when an entry is modified. What you type
-here will be added at the top of the message body. Default is:
-"An entry has been modified, here are the details:"
-
-$mail["deleted_entry"]
-
-Set the content of the message when an entry is deleted. What you type
-here will be added at the top of the message body. Default is
-"An entry has been deleted, here are the details:"
-
-
-7. Language:
-
-MRBS supports multiple languages, which can be used at the same time, based on 
-what the client is using. Users can configure their web browsers to prefer
-one language over another, and MRBS will attempt to serve the MRBS pages in
-the user's preferred language. You can specify the default language in
-config.inc.php. See the file called LANGUAGE for more info.
-
-MRBS also uses your server's OS locale support to localise date/time strings.
-MRBS attempts to figure out what locale should be used based on your
-preferred language and the server OS. Use "locale -a" on your unix system to
-find out what locale support is installed. On Windows any language supported
-by Windows should work.
-
-From mrbs-1.2-pre2, MRBS is internationalised as long as the config
-variable $unicode_encoding is set to 1 (which is the default setting). 
-If this is set, then MRBS serves all of its pages in UTF-8 and stores
-everything in the database in UTF-8. This means that all languages work
-together.
-
-IF THIS DOES NOT WORK for you (your server may not have unicode support),
-just set $unicode_encoding to 0. MRBS will run the old way, with pages
-being served in an encoding based on the language, and the encoding of data
-in the database being a mess of different encodings based on the users'
-preferred language.
-
-To use Unicode, php should be built with 'iconv' support ('--with-iconv'
-directive), or have the iconv extension installed and enabled. On Windows,
-if you are using PHP 5, iconv support is built-in.
-
-For PHP 4 on Windows, three things are needed :
-
-- iconv.dll file in in the system path. Either copy it from your
-  \%phpdir%\dlls\ directory into \%windir%\system32\ directory,
-  or add your \%phpdir%\dlls\ directory to your PATH environment variable.
-  (Note: for Microsoft IIS, you HAVE to copy iconv.dll into \%windir%\system32\)
-- uncomment php_iconv.dll in php.ini.
-- extension directory in php.ini have to be properly set to your actual
-  \%phpdir%\extensions\
-
-
-Note: Upgrading mysql database from previous charsets to Unicode :
-
-  You can use convert_db_to_utf8.php script to convert text in the
-  database to UTF8, to use MRBS with $unicode_encoding set to 1. The
-  administrator should copy it into the web directory, run it (choosing
-  the encoding to convert from) ONCE, and then move it back out of the
-  web directory. We recommend you backup your database before running
-  this script if you are at all worried.
-
-
-8. Entry Types:
-
-By default, MRBS defines two "meeting types" - internal and external. There
-are a total of 10 types ready to be used, if you assign names to them in
-your config.inc.php file. Each type has a color, defined in the style sheet.
-
-
-HELP/FAQ File:
-
-Customize site_faq.html if desired.  It contains help that can be tailored
-to your environment. Currently this help is available in a number of
-languages.
+Individual sites can even have their own authentication methods, but note that
+authentication against WordPress multisite is not supported.
 
 
 SECURITY NOTES!
@@ -602,12 +524,13 @@ files but this is not essential, since critical files containing your
 database login and password use a ".php" extension like config.inc.php.
 See your web server documentation on how to do this.
 
-There is an Apache .htaccess file included, but Apache might ignore it because
-of the "AllowOverride None" in your httpd.conf. Either change "AllowOverride
-None" to "AllowOverride Limit", create a new <Directory> entry with the
-contents of the .htaccess file in it, or add the contents of the .htaccess
-to httpd.conf where it says "<Files ~ "^\.ht">". And then read the Apache
-docs five or six times, until you know what you just did.
+There are example Apache .htaccess files included, for different versions of
+Apache, but Apache might ignore a .htaccess file in your MRBS directory
+due to the setting of the "AllowOverride" directive in your web server
+configuration. Either change "AllowOverride None" to "AllowOverride Limit",
+or create a new <Directory> entry with the contents of the .htaccess example
+file in it for your MRBS installation. Then read the Apache docs five or six
+times, until you know what you just did.
 
 You may protect "config.inc.php" to only allow the web server to read it.
 For example:   # chown httpd config.inc.php; chmod 400 config.inc.php
@@ -616,5 +539,3 @@ The script "testdata.php" is for testing only.  Do not leave it in a
 directory accessible to your web server. Anyone running this will add a
 large number of test entries to your database, regardless of
 authentication, and book all your rooms to people you've never heard of.
-
-$Id: INSTALL 798 2008-04-13 19:59:24Z jberanek $

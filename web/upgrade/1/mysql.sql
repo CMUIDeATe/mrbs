@@ -1,4 +1,3 @@
-# $Id: mysql.sql 1038 2009-03-01 23:18:07Z jberanek $
 
 CREATE TABLE %DB_TBL_PREFIX%variables
 (

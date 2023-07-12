@@ -1,62 +1,46 @@
 <?php
+namespace MRBS;
 
-// $Id: style.inc 1127 2009-06-23 14:35:08Z cimorrison $
 
-global $unicode_encoding;
-global $vocab; // outside of scope; needs to be denote as global
-
-// NOTE:  The filename for the stylesheet for <= IE6 must contain the string 'ielte6'.
-// The href strings in the <link> tags below are used by InitActiveCell in xbLib.js to 
-// test whether the browser is IE6 or below - and therefore whether to use JavaScript
-// highlighting instead of CSS highlighting.   In particular the href string for the
-// stylesheet for browsers IE6 or below must contain the string 'ielte6'.
-?>
-    <link rel="stylesheet" href="mrbs.css.php" type="text/css">
-    <link rel="stylesheet" media="print" href="mrbs-print.css.php" type="text/css">
-    <?php
-    // JavaScript overrides first, followed by the IE overrides.   This allows
-    // the IE overrides to override the JavaScript overrides.
-    ?>
-    <script src="mrbs-js-overrides.js" type="text/javascript"></script>
-    <!--[if IE]>
-    <link rel="stylesheet" href="mrbs-ie.css" type="text/css">
-    <![endif]-->
-    <!--[if IE 8]>
-    <link rel="stylesheet" href="mrbs-ie8.css" type="text/css">
-    <![endif]-->
-    <!--[if lte IE 8]>
-    <link rel="stylesheet" href="mrbs-ielte8.css" type="text/css">
-    <![endif]-->
-    <!--[if lte IE 7]>
-    <link rel="stylesheet" href="mrbs-ielte7.css.php" type="text/css">
-    <![endif]-->
-    <!--[if lte IE 6]>
-    <link rel="stylesheet" href="mrbs-ielte6.css" type="text/css">
-    <![endif]-->
-
-    <meta http-equiv="Content-Type" content="text/html; charset=<?php
-
-if ($unicode_encoding)
+function link($href, $add_version=false, $media=null)
 {
-  echo "utf-8";
+  echo '<link rel="stylesheet" type="text/css" href="';
+  $value = ($add_version) ? add_version($href) : $href;
+  echo htmlspecialchars($value) . '"';
+  if (isset($media))
+  {
+    echo " media=\"$media\"";
+  }
+  echo ">\n";
 }
-else
-{
-  // We use $vocab directly instead of get_vocab() because we have
-  // no requirement to convert the vocab text, we just output
-  // the charset
-  echo $vocab["charset"];
-}
-?>">
-    <meta name="robots" content="noindex">
-<?php
 
-global $refresh_rate;
-global $PHP_SELF;
 
-if (($refresh_rate != 0) &&
-    preg_match("/(day|week|month)\.php/",$PHP_SELF))
+global $custom_css_url;
+global $debug;
+
+link(($debug) ? 'jquery/ui/css/jquery-ui.structure.css' : 'jquery/ui/css/jquery-ui.structure.min.css', true);
+link(($debug) ? 'jquery/ui/css/cupertino/jquery-ui.theme.css' : 'jquery/ui/css/cupertino/jquery-ui.theme.min.css', true);
+link(($debug) ? 'jquery/datatables/datatables.css' : 'jquery/datatables/datatables.min.css', true);
+link('js/flatpickr/css/flatpickr.min.css', true);
+link('jquery/select2/dist/css/select2.min.css', true);
+link(multisite('css/mrbs.css.php'), true);
+
+if (using_rtl_lang())
 {
-  echo "    <meta http-equiv=\"Refresh\" content=\"$refresh_rate\">\n";
+  link(multisite('css/mrbs-rtl.css.php'), true);
 }
-?>
+
+link(multisite('css/mrbs-print.css.php'), true, 'print');
+
+echo "<!--[if IE]>\n";
+link('css/mrbs-ie.css', true);
+if (using_rtl_lang())
+{
+  link('css/mrbs-ie-rtl.css', true);
+}
+echo "<![endif]-->\n";
+
+if (isset($custom_css_url))
+{
+  link($custom_css_url, true);
+}

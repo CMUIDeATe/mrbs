@@ -1,58 +1,93 @@
 <?php
+namespace MRBS;
 
-// $Id: help.php 1041 2009-03-02 14:30:23Z jberanek $
-
-require_once "grab_globals.inc.php";
-require_once "config.inc.php";
-require_once "dbsys.inc";
-require_once "mrbs_auth.inc";
-require_once "functions.inc";
+require "defaultincludes.inc";
 require_once "version.inc";
 
-// Get form variables
-$day = get_form_var('day', 'int');
-$month = get_form_var('month', 'int');
-$year = get_form_var('year', 'int');
-$area = get_form_var('area', 'int');
-$room = get_form_var('room', 'int');
+// Check the user is authorised for this page
+checkAuthorised(this_page());
 
-// If we dont know the right date then make it up
-if (!isset($day) or !isset($month) or !isset($year))
-{
-  $day   = date("d");
-  $month = date("m");
-  $year  = date("Y");
-}
-if (empty($area))
-{
-  $area = get_default_area();
-}
+$context = array(
+    'view'      => $view,
+    'view_all'  => $view_all,
+    'year'      => $year,
+    'month'     => $month,
+    'day'       => $day,
+    'area'      => $area,
+    'room'      => $room ?? null
+  );
 
-print_header($day, $month, $year, $area, isset($room) ? $room : "");
+print_header($context);
 
 echo "<h3>" . get_vocab("about_mrbs") . "</h3>\n";
-echo "<table id=\"version_info\">\n";
-echo "<tr><td><a href=\"http://mrbs.sourceforge.net\">" . get_vocab("mrbs") . "</a>:</td><td>" . get_mrbs_version() . "</td></tr>\n";
-echo "<tr><td>" . get_vocab("database") . ":</td><td>" . sql_version() . "</td></tr>\n";
-echo "<tr><td>" . get_vocab("system") . ":</td><td>" . php_uname() . "</td></tr>\n";
-echo "<tr><td>" . get_vocab("servertime") . ":</td><td>" . utf8_strftime("%c", time()) . "</td></tr>\n";
-echo "<tr><td>PHP:</td><td>" . phpversion() . "</td></tr>\n";
-echo "</table>\n";
+
+if (!is_admin())
+{
+  echo "<table class=\"details list\">\n";
+  echo "<tr><td><a href=\"http://mrbs.sourceforge.net\">" . get_vocab("mrbs") . "</a></td><td>" . get_mrbs_version() . "</td></tr>\n";
+  echo "</table>\n";
+}
+else
+{
+  // Restrict the configuration and server details to admins, for security reasons.
+  echo "<table class=\"details has_caption list\">\n";
+  echo "<caption>" . get_vocab("config_details") . "</caption>\n";
+  echo "<tr><td>" . get_vocab("mrbs_version") . "</td><td>" . get_mrbs_version() . "</td></tr>\n";
+  echo "<tr><td>" . get_vocab("db_schema_version") . "</td><td>" . DB::DB_SCHEMA_VERSION . "</td></tr>\n";
+  echo "<tr><td>" . get_vocab("db_local_schema_version") . "</td><td>" . DB::DB_SCHEMA_VERSION_LOCAL . "</td></tr>\n";
+  echo '<tr><td>$auth[\'type\']</td><td>' . htmlspecialchars($auth['type']) . "</td></tr>\n";
+  echo '<tr><td>$auth[\'session\']</td><td>' . htmlspecialchars($auth['session']) . "</td></tr>\n";
+  echo "</table>\n";
+
+
+  echo "<table class=\"details has_caption list\">\n";
+  echo "<caption>" . get_vocab("server_details") . "</caption>\n";
+  echo "<tr><td>" . get_vocab("database") . "</td><td>" . db()->version() . "</td></tr>\n";
+  echo "<tr><td>" . get_vocab("system") . "</td><td>" . php_uname() . "</td></tr>\n";
+  echo "<tr><td>" . get_vocab("servertime") . "</td><td>" .
+       datetime_format($datetime_formats['date_and_time_help'], time()) .
+       "</td></tr>\n";
+  echo "<tr><td>" . get_vocab("server_software") . "</td><td>" .
+       htmlspecialchars(get_server_software()) . "</td></tr>\n";
+  echo "<tr><td>PHP</td><td>" . phpversion() . "</td></tr>\n";
+
+  // The PHP extensions loaded ,particularly intl and mbstring, are useful for debugging.
+  $extensions = get_loaded_extensions();
+  asort($extensions);
+  echo "<tr><td>" . get_vocab("extensions") . "</td><td>" .
+        htmlspecialchars(implode(', ', $extensions)) . "</td></tr>\n";
+
+  echo "</table>\n";
+}
+
 
 echo "<p>\n" . get_vocab("browserlang") .":\n";
 
-echo implode(", ", array_keys($langs));
+if (isset($server['HTTP_ACCEPT_LANGUAGE']))
+{
+  echo htmlspecialchars(implode(', ', get_browser_langs($server['HTTP_ACCEPT_LANGUAGE'])));
+}
 
 echo "\n</p>\n";
 
 echo "<h3>" . get_vocab("help") . "</h3>\n";
 echo "<p>\n";
-echo get_vocab("please_contact") . '<a href="mailto:' . htmlspecialchars($mrbs_admin_email)
-  . '">' . htmlspecialchars($mrbs_admin)
-  . "</a> " . get_vocab("for_any_questions") . "\n";
+// Obfuscate the email address
+$html = '<a href="mailto:' . rawurlencode($mrbs_admin_email) . '">' . htmlspecialchars($mrbs_admin) . '</a>';
+$contact = '<span class="contact" data-html="' . base64_encode($html) . '">' . htmlspecialchars($mrbs_admin) . '</span>';
+echo get_vocab("please_contact", $contact) . "\n";
 echo "</p>\n";
- 
-require_once "site_faq" . $faqfilelang . ".html";
 
-require_once "trailer.inc";
-?>
+$faqfile = $faqfilelang ?? '';
+
+// Older versions of MRBS required an underscore in front of the language
+// in the config setting.  In order to maintain backwards compatibility we
+// cater for both old (eg "_fr") and new (eg "fr") styles.
+if (($faqfile !== '') && !str_starts_with($faqfile, '_'))
+{
+  $faqfile = '_' . $faqfile;
+}
+
+require_once "site_faq/site_faq" . $faqfile . ".html";
+
+print_footer();

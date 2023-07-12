@@ -1,12 +1,13 @@
 <?php
+namespace MRBS;
+
 // +---------------------------------------------------------------------------+
 // | Meeting Room Booking System.
 // +---------------------------------------------------------------------------+
-// | Grabs the names and values of the '$HTTP_*_VARS' variables.
+// | Grabs the names and values of the $_POST and $_GET variables.
 // |---------------------------------------------------------------------------+
 // | This library grabs the names and values of the variables sent or posted to
-// | a script in the '$HTTP_*_VARS' and new globals arrays defined with
-// | php 4.1+ and sets simple globals variables from them.
+// | a script in the $_POST and $_GET variables.
 // | It does the same work for other external variables used in MRBS.
 // | USE : This file should be included in all files where external variables
 // |       are used, preferably before other included files.
@@ -14,182 +15,115 @@
 // |           it must also be added here.
 // +---------------------------------------------------------------------------+
 // | @author    Original Authors : PhpMyAdmin project.
-// | @author    thierry_bo.
-// | @version   $Revision: 797 $.
 // +---------------------------------------------------------------------------+
-//
-// $Id: grab_globals.inc.php 1041 2009-03-02 14:30:23Z jberanek $
 
 
-//
-function get_form_var($variable, $type = 'string')
+// Gets a form variable.
+//    $var        The variable name
+//    $var_type   The type of the variable ('bool', 'decimal', 'int', 'string' or 'array')
+//    $default    The default value for the variable
+//    $source     If set, then restrict the search to this source.  Can be
+//                INPUT_GET or INPUT_POST.
+function get_form_var($var, $var_type='string', $default=null, $source=null)
 {
   // We use some functions from here
   require_once "functions.inc";
 
-  if ($type == 'array')
-  {
-    $value = array();
-  }
-  else
-  {
-    $value = NULL;
+  global $cli_params, $allow_cli, $get, $post;
+
+  // Set the default value, and make sure it's the right type
+  if ($var_type == 'array') {
+    $value = isset($default) ? (array)$default : array();
+  } else {
+    $value = $default;
   }
 
-  if (!empty($_POST) && isset($_POST[$variable]))
+  // Get the command line arguments if any (and we're allowed to),
+  // otherwise get the POST variables
+  if ($allow_cli && (!empty($cli_params) && isset($cli_params[$var]))) {
+    $value = $cli_params[$var];
+  } else if ((!isset($source) || ($source === INPUT_POST)) &&
+    (!empty($post) && isset($post[$var]))) {
+    $value = $post[$var];
+  }
+
+  // Then get the GET variables
+  if ((!isset($source) || ($source === INPUT_GET)) &&
+    (!empty($get) && isset($get[$var]))) {
+    $value = $get[$var];
+  }
+
+  // Clean up the variable
+  // (Checkboxes return null if not set, so we want them to be converted to false)
+  if (($var_type == 'bool') || ($value !== null))
   {
-    if ($type == 'array')
+    switch ($var_type)
     {
-      $value = (array)$_POST[$variable];
-    }
-    else
-    {
-      $value = $_POST[$variable];
+      case 'array':
+        $value = (array) $value;
+        break;
+      case 'bool':
+        $value = (bool) $value;
+        break;
+      case 'decimal':
+        // This isn't a very good sanitisation as it will let through thousands separators and
+        // also multiple decimal points.  It needs to be improved, but care needs to be taken
+        // over, for example, whether a comma should be allowed for a decimal point.  So for
+        // the moment it errs on the side of letting through too much.
+        $value = filter_var($value, FILTER_SANITIZE_NUMBER_FLOAT,
+                            FILTER_FLAG_ALLOW_FRACTION | FILTER_FLAG_ALLOW_THOUSAND);
+        if ($value === '')
+        {
+          $value = null;
+        }
+        break;
+      case 'int':
+        $value = ($value === '') ? null : intval($value);
+        break;
+      default:
+        break;
     }
   }
-  else if (!empty($HTTP_POST_VARS) && isset($HTTP_POST_VARS[$variable]))
-  {
-    if ($type == 'array')
-    {
-      $value = (array)$HTTP_POST_VARS[$variable];
-    }
-    else
-    {
-      $value = $HTTP_POST_VARS[$variable];
-    }
-  }
-  if (!empty($_GET) && isset($_GET[$variable]))
-  {
-    if ($type == 'array')
-    {
-      $value = (array)$_GET[$variable];
-    }
-    else
-    {
-      $value = $_GET[$variable];
-    }
-  }
-  else if (!empty($HTTP_GET_VARS) && isset($HTTP_GET_VARS[$variable]))
-  {
-    if ($type == 'array')
-    {
-      $value = (array)$HTTP_GET_VARS[$variable];
-    }
-    else
-    {
-      $value = $HTTP_GET_VARS[$variable];
-    }
-  }
-  if ($value != NULL)
-  {
-    if ($type == 'int')
-    {
-      $value = intval(unslashes($value));
-    }
-    else if ($type == 'string')
-    {
-      $value = unslashes($value);
-    }
-    else if ($type == 'array')
-    {
-      foreach ($value as $arrkey => $arrvalue)
-      {
-        $value[$arrkey] = unslashes($arrvalue);
-      }
-    }
-  }
+
   return $value;
 }
 
 
-// -- PHP_SELF --
-if (!empty($_SERVER) && isset($_SERVER['PHP_SELF']))
+// Check that the WordPress files haven't already been included (and therefore
+// that $_POST and $_GET haven't already been tampered with).
+if (defined('ABSPATH'))  // standard test for WordPress
 {
-  $PHP_SELF = $_SERVER['PHP_SELF'];
-}
-else if (!empty($HTTP_SERVER_VARS) && isset($HTTP_SERVER_VARS['PHP_SELF']))
-{
-  $PHP_SELF = $HTTP_SERVER_VARS['PHP_SELF'];
+  die('MRBS internal error: Wordpress files have already been included.');
 }
 
-// -- PHP_AUTH_USER --
-if (!empty($_SERVER) && isset($_SERVER['PHP_AUTH_USER']))
+// Unfotunately, in WordPress all $_GET, $_POST, $_COOKIE and $_SERVER superglobals are
+// slashed, regardless of the setting of magic_quotes.   So if we are using the
+// WordPress authentication and session schemes then this will happen when the WordPress
+// files are included.  To get round this we take a local copy of $_GET and $_POST
+// before the WordPress files are included.   (There's no need to do this with $_SERVER
+// because we process $_SERVER when this file is included and we make sure that the
+// WordPress files haven't already been included).  For more details of the problem see
+// https://wordpress.org/support/topic/wp-automatically-escaping-get-and-post-etc-globals and
+// https://core.trac.wordpress.org/ticket/18322
+
+// Take clean copies of $_GET, $_POST and $_SERVER  before WordPress alters them
+// ($_COOKIE isn't a problem because if we are using WordPress auth and session then
+// we won't be using $_COOKIE).
+
+$get = $_GET;
+$post = $_POST;
+$server = $_SERVER;
+
+// If we're operating from the command line then build
+// an associative array of the command line parameters
+// (assumes they're in the form 'parameter=value')
+if (!empty($argc))
 {
-  $PHP_AUTH_USER = $_SERVER['PHP_AUTH_USER'];
-}
-else if (!empty($HTTP_SERVER_VARS) && isset($HTTP_SERVER_VARS['PHP_AUTH_USER']))
-{
-  $PHP_AUTH_USER = $HTTP_SERVER_VARS['PHP_AUTH_USER'];
+  $cli_params = array();
+  for ($i=1; $i<$argc; $i++)
+  {
+    parse_str($argv[$i], $param);
+    $cli_params = array_merge($cli_params, $param);
+  }
 }
 
-// -- PHP_AUTH_PW --
-if (!empty($_SERVER) && isset($_SERVER['PHP_AUTH_PW']))
-{
-  $PHP_AUTH_PW = $_SERVER['PHP_AUTH_PW'];
-}
-else if (!empty($HTTP_SERVER_VARS) && isset($HTTP_SERVER_VARS['PHP_AUTH_PW']))
-{
-  $PHP_AUTH_PW = $HTTP_SERVER_VARS['PHP_AUTH_PW'];
-}
-
-// -- REMOTE_USER --
-if (!empty($_SERVER) && isset($_SERVER['REMOTE_USER']))
-{
-  $REMOTE_USER = $_SERVER['REMOTE_USER'];
-}
-else if (!empty($HTTP_SERVER_VARS) && isset($HTTP_SERVER_VARS['REMOTE_USER']))
-{
-  $REMOTE_USER = $HTTP_SERVER_VARS['REMOTE_USER'];
-}
-
-// -- REMOTE_ADDR --
-if (!empty($_SERVER) && isset($_SERVER['REMOTE_ADDR']))
-{
-  $REMOTE_ADDR = $_SERVER['REMOTE_ADDR'];
-}
-else if (!empty($HTTP_SERVER_VARS) && isset($HTTP_SERVER_VARS['REMOTE_ADDR']))
-{
-  $REMOTE_ADDR = $HTTP_SERVER_VARS['REMOTE_ADDR'];
-}
-
-// -- QUERY_STRING --
-if (!empty($_SERVER) && isset($_SERVER['QUERY_STRING']))
-{
-  $QUERY_STRING = $_SERVER['QUERY_STRING'];
-}
-else if (!empty($HTTP_SERVER_VARS) && isset($HTTP_SERVER_VARS['QUERY_STRING']))
-{
-  $QUERY_STRING = $HTTP_SERVER_VARS['QUERY_STRING'];
-}
-
-// -- HTTP_ACCEPT_LANGUAGE --
-if (!empty($_SERVER) && isset($_SERVER['HTTP_ACCEPT_LANGUAGE']))
-{
-  $HTTP_ACCEPT_LANGUAGE = $_SERVER['HTTP_ACCEPT_LANGUAGE'];
-}
-else if (!empty($HTTP_SERVER_VARS) && isset($HTTP_SERVER_VARS['HTTP_ACCEPT_LANGUAGE']))
-{
-  $HTTP_ACCEPT_LANGUAGE = $HTTP_SERVER_VARS['HTTP_ACCEPT_LANGUAGE'];
-}
-
-// -- HTTP_REFERER --
-if (!empty($_SERVER) && isset($_SERVER['HTTP_REFERER']))
-{
-  $HTTP_REFERER = $_SERVER['HTTP_REFERER'];
-}
-else if (!empty($HTTP_SERVER_VARS) && isset($HTTP_SERVER_VARS['HTTP_REFERER']))
-{
-  $HTTP_REFERER = $HTTP_SERVER_VARS['HTTP_REFERER'];
-}
-
-// -- HTTP_HOST --
-if (!empty($_SERVER) && isset($_SERVER['HTTP_HOST']))
-{
-  $HTTP_HOST = $_SERVER['HTTP_HOST'];
-}
-else if (!empty($HTTP_SERVER_VARS) && isset($HTTP_SERVER_VARS['HTTP_HOST']))
-{
-  $HTTP_HOST = $HTTP_SERVER_VARS['HTTP_HOST'];
-}
-
-?>

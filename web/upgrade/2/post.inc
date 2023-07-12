@@ -1,15 +1,14 @@
 <?php
-
-// $Id: post.inc 1090 2009-04-06 20:53:38Z jberanek $
+namespace MRBS;
 
 // Populate the new columns in the area table with the default values taken
 // from the config file.
 
-global $tbl_area;
 global $resolution, $default_duration;
 global $morningstarts, $morningstarts_minutes, $eveningends, $eveningends_minutes;
+global $admin_handle;
 
-$sql = "UPDATE $tbl_area SET
+$sql = "UPDATE " . _tbl('area') . " SET
         resolution = $resolution,
         default_duration = $default_duration,
         morningstarts = $morningstarts,
@@ -17,11 +16,4 @@ $sql = "UPDATE $tbl_area SET
         eveningends = $eveningends,
         eveningends_minutes = $eveningends_minutes";
     
-$res = sql_command($sql);
-if ($res == -1)
-{
-  // No need to localise, should never happen
-  print "<span class=\"error\">Failed to set default values for new columns in area table.</span>";
-}
-
-?>
+$admin_handle->command($sql);
